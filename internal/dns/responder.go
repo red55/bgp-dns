@@ -1,0 +1,58 @@
+package dns
+
+import (
+	"github.com/miekg/dns"
+	"github.com/red55/bgp-dns-peer/internal/cfg"
+	"github.com/red55/bgp-dns-peer/internal/log"
+)
+
+func proxyQuery(w dns.ResponseWriter, rq *dns.Msg) {
+	log.L().Debugf("Proxying request %v from: %s", rq, w.RemoteAddr().String())
+
+	if r, e := queryDns(rq); e != nil {
+		log.L().Errorf("Forwarding response to upstream responder failed %v", e)
+	} else {
+		r.SetReply(rq)
+		r.Authoritative = true
+		r.Rcode = dns.RcodeSuccess
+
+		if e = w.WriteMsg(r); e != nil {
+			log.L().Errorf("Failed to write response to client %s, %v", w.RemoteAddr(), e)
+		}
+	}
+
+}
+func respond(w dns.ResponseWriter, rq *dns.Msg) {
+	var e error
+	log.L().Debugf("Got DNS request from: %s, %v", w.RemoteAddr().String(), rq)
+
+	for _, q := range rq.Question {
+		switch q.Qtype {
+		case dns.TypeA:
+			var de *Entry
+			if de, e = cache.lookupOrResolve(q.Name); e != nil {
+				log.L().Errorf("Error resolving %s - %s", q.Name, e.Error())
+			} else {
+				var r = new(dns.Msg)
+				r.Answer = de.r.Answer
+				r.SetReply(rq)
+				r.Authoritative = true
+				r.Rcode = dns.RcodeSuccess
+
+				if e = w.WriteMsg(r); e != nil {
+					log.L().Errorf("Failed to write response to client %s, %v", w.RemoteAddr(), e)
+				}
+			}
+		default:
+			//proxy to any resolver
+			proxyQuery(w, rq)
+		}
+	}
+}
+
+func responderOnConfigChange() {
+	for _, n := range cfg.AppCfg.Names() {
+		dns.HandleRemove(n)
+		dns.HandleFunc(n, respond)
+	}
+}

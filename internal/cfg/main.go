@@ -1,58 +1,140 @@
 package cfg
 
 import (
+	"fmt"
+	"github.com/fsnotify/fsnotify"
+	"github.com/mitchellh/mapstructure"
 	"github.com/red55/bgp-dns-peer/internal/log"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"syscall"
+	"go.uber.org/zap"
+	"net"
+	"reflect"
+	"sync"
 	"time"
 )
 
-type appCfgTimeoutsT struct {
-	defaultTTL time.Duration `yaml:"dnszero"`
-}
-
-func (act *appCfgTimeoutsT) TTL() time.Duration {
-	return act.defaultTTL
-}
-
-type appCfgT struct {
-	timeouts  *appCfgTimeoutsT `yaml:"timeouts"`
-	resolvers []string         `yaml:"resolvers"`
-	Names     []string         `yaml:"names" validate:"required"`
-}
-
-func (ac *appCfgT) Timeouts() *appCfgTimeoutsT {
-	return ac.timeouts
-}
-
 var AppCfg *appCfgT
+var m sync.RWMutex
+
+type ConfigChangedHandler func()
+
+type ConfigChangeHandlerRegistry struct {
+	onChange []ConfigChangedHandler
+	m        sync.RWMutex
+}
+
+var changeHandlers = ConfigChangeHandlerRegistry{
+	onChange: make([]ConfigChangedHandler, 0, 3),
+	m:        sync.RWMutex{},
+}
 
 func init() {
-	log.Init()
-
 	AppCfg = &appCfgT{
-		resolvers: []string{"1.1.1.1:53", "8.8.8.8:53"},
-		timeouts: &appCfgTimeoutsT{
-			defaultTTL: 30 * time.Second,
+		Rslvrs: []addrT{
+			{Ip: net.ParseIP("8.8.8.8"), Port: 53},
 		},
+		Touts: &appCfgTimeoutsT{
+			DefaultTtl: 30 * time.Second,
+		},
+		Lg: log.NewDefaultConfig(),
 	}
-	wd, _ := syscall.Getwd()
-	log.L().Infof("My working directory: %s", wd)
 
 	viper.SetConfigType("yaml")
 	viper.AutomaticEnv()
+}
+
+func Init() {
 
 	pflag.StringP("config", "c", "appsettings.yml", "Path to configuration file.")
 	fn := pflag.Lookup("config")
 
 	viper.SetConfigFile(fn.Value.String())
+	viper.OnConfigChange(func(in fsnotify.Event) {
+		reloadConfig()
+	})
+	viper.WatchConfig()
+	reloadConfig()
+}
+
+func RegisterConfigChangeHandler(handler ConfigChangedHandler) error {
+	p := reflect.ValueOf(handler).Pointer()
+	var found bool = false
+
+	changeHandlers.m.Lock()
+	defer changeHandlers.m.Unlock()
+
+	for _, v := range changeHandlers.onChange {
+		if reflect.ValueOf(v).Pointer() == p {
+			found = true
+		}
+	}
+
+	if found {
+		return fmt.Errorf("config change handler already registered")
+	}
+
+	changeHandlers.onChange = append(changeHandlers.onChange, handler)
+	handler()
+
+	return nil
+}
+
+func Deinit() {
+	log.L().Debugf("cfg.Deinit called")
+	m.Lock()
+	defer m.Unlock()
+	changeHandlers.onChange = []ConfigChangedHandler{}
+}
+
+func readConfig() {
+	m.Lock()
+	defer m.Unlock()
 
 	if e := viper.ReadInConfig(); e != nil {
-		log.L().Fatalf("error opening config file %s, %v", fn.Value.String(), e)
+		log.L().Fatalf("error opening config file %v", e)
 	}
 
-	if e := viper.Unmarshal(&AppCfg); e != nil {
-		log.L().Fatalf("error loading config file %s into memory, %v", fn.Value.String(), e)
+	if e := viper.Unmarshal(&AppCfg, func(config *mapstructure.DecoderConfig) {
+		config.TagName = "yaml"
+		config.DecodeHook = mapstructure.ComposeDecodeHookFunc(func(from reflect.Type, to reflect.Type, data interface{}) (interface{}, error) {
+
+			if from.Kind() == reflect.String {
+				if to == reflect.TypeOf(net.IP{}) {
+					return net.ParseIP(data.(string)), nil
+				}
+
+				if to == reflect.TypeOf(zap.AtomicLevel{}) {
+					if l, e := zap.ParseAtomicLevel(data.(string)); e == nil {
+						return l, nil
+					} else {
+						return nil, e
+					}
+				}
+			}
+
+			return data, nil
+		})
+	}); e != nil {
+		log.L().Fatalf("error loading config file into memory, %v", e)
 	}
+}
+
+func fireOnChange() {
+	m.RLock()
+	defer m.RUnlock()
+
+	if len(changeHandlers.onChange) > 0 {
+		for _, handler := range changeHandlers.onChange {
+			handler()
+		}
+	}
+}
+
+func reloadConfig() {
+
+	readConfig()
+
+	fireOnChange()
+
 }

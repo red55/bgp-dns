@@ -1,0 +1,17 @@
+Logging:
+  Level: Debug
+Resolvers:
+  - Ip: 8.8.4.4
+    Port: 53
+  - Ip: 1.1.1.1
+    Port: 53
+Responder:
+  Ip: 0.0.0.0 # 127.0.0.1
+  Port: 8053
+Timeouts:
+  DefaultTTL: 10
+
+names:
+  - www.intel.com
+  - tt.csi.group
+  - tt2.csi.group
