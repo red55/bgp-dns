@@ -11,7 +11,6 @@ import (
 	"net"
 	"reflect"
 	"sync"
-	"time"
 )
 
 var AppCfg *appCfgT
@@ -35,7 +34,7 @@ func init() {
 			{Ip: net.ParseIP("8.8.8.8"), Port: 53},
 		},
 		Touts: &appCfgTimeoutsT{
-			DefaultTtl: 30 * time.Second,
+			DfltTtl: 30,
 		},
 		Lg: log.NewDefaultConfig(),
 	}
@@ -75,7 +74,6 @@ func RegisterConfigChangeHandler(handler ConfigChangedHandler) error {
 	}
 
 	changeHandlers.onChange = append(changeHandlers.onChange, handler)
-	handler()
 
 	return nil
 }
@@ -136,5 +134,4 @@ func reloadConfig() {
 	readConfig()
 
 	fireOnChange()
-
 }

@@ -9,7 +9,7 @@ import (
 
 type Entry struct {
 	fqdn   string
-	ttl    time.Duration
+	ttl    uint32
 	expire time.Time
 	ips    []string
 	r      *dns.Msg
@@ -18,7 +18,7 @@ type Entry struct {
 func NewEntry(fqdn string) *Entry {
 	r := &Entry{
 		fqdn: fqdn}
-	r.SetTtl(cfg.AppCfg.Timeouts().TTL())
+	r.SetTtl(cfg.AppCfg.Timeouts().DefaultTTL())
 	return r
 }
 
@@ -30,13 +30,13 @@ func (de *Entry) IPs() []string {
 	return de.ips
 }
 
-func (de *Entry) Ttl() time.Duration {
+func (de *Entry) Ttl() uint32 {
 	return de.ttl
 }
 
-func (de *Entry) SetTtl(ttl time.Duration) {
+func (de *Entry) SetTtl(ttl uint32) {
 	de.ttl = ttl
-	de.expire = time.Now().Add(ttl)
+	de.expire = time.Now().Add(time.Duration(de.ttl) * time.Second)
 }
 
 func (de *Entry) Expire() time.Time {
@@ -44,5 +44,5 @@ func (de *Entry) Expire() time.Time {
 }
 
 func (de *Entry) String() string {
-	return fmt.Sprintf("%s -> (TTL: %s, Expire at: %s) %v", de.fqdn, de.Ttl(), de.Expire(), de.ips)
+	return fmt.Sprintf("%s -> (TTL: %d, Expire at: %s) %v", de.fqdn, de.Ttl(), de.Expire(), de.ips)
 }

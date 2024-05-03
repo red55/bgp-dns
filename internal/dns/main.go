@@ -27,12 +27,12 @@ type resolversT struct {
 var _resolvers resolversT
 
 func init() {
-	cache = Cache{}
-	chanResolver = make(chan string, 10)
-	chanRefresher = make(chan struct{})
+	cache = &Cache{}
+
+	chanRefresher = make(chan *msg)
 }
 
-func SetResolvers(resolvers []*net.UDPAddr) {
+func setResolvers(resolvers []*net.UDPAddr) {
 	_resolvers.m.Lock()
 	defer _resolvers.m.Unlock()
 
@@ -51,13 +51,7 @@ func SetResolvers(resolvers []*net.UDPAddr) {
 
 func Init() {
 	// Clear dns cache and resolve configured dns names
-	_ = cfg.RegisterConfigChangeHandler(func() {
-		ResolverClear()
-		for _, n := range cfg.AppCfg.Names() {
-			ResolverEnqueue(n)
-		}
-	},
-	)
+	_ = cfg.RegisterConfigChangeHandler(resolverOnConfigChange)
 	_ = cfg.RegisterConfigChangeHandler(responderOnConfigChange)
 
 	dns.HandleFunc(".", proxyQuery)
@@ -72,22 +66,29 @@ func Init() {
 		}
 	}()
 
-	go resolver(chanResolver)
-
 	go refresher(chanRefresher)
+
+	resolverOnConfigChange()
+	responderOnConfigChange()
 }
 
 func Deinit() {
-	close(chanResolver)
 
-	chanRefresher <- struct{}{}
+	chanRefresher <- &msg{
+		op: opQuit,
+	}
 	close(chanRefresher)
 }
 
-func ResolverEnqueue(domainName string) {
-	chanResolver <- domainName
+func ResolverEnqueue(fqdn string) {
+	chanRefresher <- &msg{
+		op:   opAdd,
+		fqdn: fqdn,
+	}
 }
 
 func ResolverClear() {
-	cache.clear()
+	chanRefresher <- &msg{
+		op: opClear,
+	}
 }

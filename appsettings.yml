@@ -9,9 +9,11 @@ Responder:
   Ip: 0.0.0.0 # 127.0.0.1
   Port: 8053
 Timeouts:
-  DefaultTTL: 10
+  DefaultTTL: 60
 
 names:
-  - www.intel.com
+  - intel.com
+  - bb.intel.com
   - tt.csi.group
   - tt2.csi.group
+  - ya.ru

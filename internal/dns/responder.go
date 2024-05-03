@@ -12,16 +12,13 @@ func proxyQuery(w dns.ResponseWriter, rq *dns.Msg) {
 	if r, e := queryDns(rq); e != nil {
 		log.L().Errorf("Forwarding response to upstream responder failed %v", e)
 	} else {
-		r.SetReply(rq)
-		r.Authoritative = true
-		r.Rcode = dns.RcodeSuccess
-
 		if e = w.WriteMsg(r); e != nil {
 			log.L().Errorf("Failed to write response to client %s, %v", w.RemoteAddr(), e)
 		}
 	}
 
 }
+
 func respond(w dns.ResponseWriter, rq *dns.Msg) {
 	var e error
 	log.L().Debugf("Got DNS request from: %s, %v", w.RemoteAddr().String(), rq)
@@ -34,11 +31,10 @@ func respond(w dns.ResponseWriter, rq *dns.Msg) {
 				log.L().Errorf("Error resolving %s - %s", q.Name, e.Error())
 			} else {
 				var r = new(dns.Msg)
-				r.Answer = de.r.Answer
 				r.SetReply(rq)
-				r.Authoritative = true
-				r.Rcode = dns.RcodeSuccess
+				r.Answer = de.r.Answer
 
+				log.L().Debugf("Answering to %s: %s", w.RemoteAddr(), r)
 				if e = w.WriteMsg(r); e != nil {
 					log.L().Errorf("Failed to write response to client %s, %v", w.RemoteAddr(), e)
 				}

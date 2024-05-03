@@ -7,13 +7,12 @@ import (
 )
 
 type Cache struct {
-	m            sync.RWMutex
-	entries      []*Entry
-	next2Refresh *Entry
+	m           sync.RWMutex
+	entries     []*Entry
+	nextRefresh *Entry
 }
 
-var chanResolver chan string
-var chanRefresher chan struct{}
+var chanRefresher chan *msg
 
 func (c *Cache) String() string {
 	c.m.RLock()
@@ -26,11 +25,13 @@ func (c *Cache) String() string {
 	return ret
 }
 
-var cache Cache
+var cache *Cache
 
-func (c *Cache) findLeastTTLCacheEntry() *Entry {
-	c.m.RLock()
-	defer c.m.RUnlock()
+func (c *Cache) findLeastTTLCacheEntry(lock bool) *Entry {
+	if lock {
+		c.m.RLock()
+		defer c.m.RUnlock()
+	}
 
 	if len(c.entries) == 0 {
 		return nil
@@ -48,7 +49,7 @@ func (c *Cache) findLeastTTLCacheEntry() *Entry {
 
 }
 
-func (c *Cache) findCacheEntry(dnsName string) *Entry {
+func (c *Cache) find(dnsName string) *Entry {
 	c.m.RLock()
 	defer c.m.RUnlock()
 	foundIdx := slices.IndexFunc(c.entries, func(de *Entry) bool { return de.Fqdn() == dnsName })
@@ -58,7 +59,7 @@ func (c *Cache) findCacheEntry(dnsName string) *Entry {
 		return nil
 	}
 }
-func (c *Cache) addCacheEntry(dnsName string) *Entry {
+func (c *Cache) add(dnsName string) *Entry {
 	var de = NewEntry(dnsName)
 
 	c.m.Lock()
@@ -66,27 +67,50 @@ func (c *Cache) addCacheEntry(dnsName string) *Entry {
 
 	c.entries = append(c.entries, de)
 	if len(c.entries) == 1 {
-		c.next2Refresh = c.entries[0]
+		c.nextRefresh = c.entries[0]
 	}
 
 	return de
 }
 
-func (c *Cache) setNextRefreshEntry(next *Entry) {
+func (c *Cache) getNextRefresh() *Entry {
+	c.m.RLock()
+	defer c.m.RUnlock()
+
+	return c.nextRefresh
+}
+
+func (c *Cache) setNextRefresh(next *Entry) {
 	c.m.Lock()
-	c.next2Refresh = next
 	defer c.m.Unlock()
 
+	c.nextRefresh = next
 }
+
 func (c *Cache) lookupOrResolve(dnsName string) (*Entry, error) {
-	var de = c.findCacheEntry(dnsName)
+	var de = c.find(dnsName)
 	var e error = nil
 	if de == nil {
-		de = c.addCacheEntry(dnsName)
+		de = c.add(dnsName)
 		e = resolve(de)
 	}
 	return de, e
 }
+func (c *Cache) remove(fqdn string) error {
+	c.m.Lock()
+	defer c.m.Unlock()
+
+	found := slices.IndexFunc(c.entries, func(de *Entry) bool { return de.Fqdn() == fqdn })
+	if found == -1 {
+		return fmt.Errorf("entry not found")
+	}
+	c.entries[found] = c.entries[len(c.entries)-1]
+	c.entries = c.entries[:len(c.entries)-1]
+	c.nextRefresh = c.findLeastTTLCacheEntry(false)
+
+	return nil
+}
+
 func (c *Cache) clear() {
 	c.m.Lock()
 	defer c.m.Unlock()

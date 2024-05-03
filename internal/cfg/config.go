@@ -3,15 +3,14 @@ package cfg
 import (
 	"go.uber.org/zap"
 	"net"
-	"time"
 )
 
 type appCfgTimeoutsT struct {
-	DefaultTtl time.Duration `yaml:"DefaultTTL"`
+	DfltTtl uint32 `yaml:"DefaultTTL"`
 }
 
-func (act *appCfgTimeoutsT) TTL() time.Duration {
-	return act.DefaultTtl
+func (act *appCfgTimeoutsT) DefaultTTL() uint32 {
+	return act.DfltTtl
 }
 
 type addrT struct {

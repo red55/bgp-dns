@@ -1,41 +1,75 @@
 package dns
 
 import (
+	"github.com/red55/bgp-dns-peer/internal/cfg"
 	"github.com/red55/bgp-dns-peer/internal/log"
 	"time"
 )
 
-func refresher(c chan struct{}) {
-	for {
-		cache.m.RLock()
-		var ttl time.Duration
-		if cache.next2Refresh == nil {
-			ttl = 10 * time.Second
-			log.L().Infof("Refresher will sleep for %s until %s for <empty>", ttl, time.Now().Add(ttl))
-		} else {
-			ttl = cache.next2Refresh.Expire().Sub(time.Now())
-			if ttl < 0 {
-				log.L().Errorf("Looks like %v already expired. Missed time %s.", cache.next2Refresh, ttl)
-				ttl = 0
-			}
-			log.L().Infof("Refresher will sleep for %s until %s for %s", ttl, cache.next2Refresh.Expire(),
-				cache.next2Refresh.Fqdn())
-		}
-		cache.m.RUnlock()
+type operation int
 
+const (
+	opAdd operation = iota
+	opRemove
+	opClear
+	opQuit
+)
+
+type msg struct {
+	op   operation
+	fqdn string
+}
+
+func calcTTL(de *Entry) uint32 {
+	var ttl = cfg.AppCfg.Timeouts().DefaultTTL()
+
+	if de == nil {
+		log.L().Infof("Refresher will sleep for %ds until %s for <empty>", ttl,
+			time.Now().Add(time.Duration(ttl)*time.Second))
+	} else {
+		var t = de.Expire().Sub(time.Now()).Seconds()
+		if t > 0 {
+			ttl = uint32(t)
+		} else {
+			log.L().Errorf("Looks like %v already expired. Missed time %f.", de, t)
+		}
+
+		log.L().Infof("Refresher will sleep for %ds until %s for %s", ttl, de.Expire(),
+			de.Fqdn())
+	}
+
+	return ttl
+}
+
+func refresher(c chan *msg) {
+	var ttl = uint32(1) // Until cfg is read on startup sleep only 1 sec
+
+	for {
 		select {
-		case <-c:
-			return
-		case <-time.After(ttl):
-			cache.m.RLock()
-			entry := cache.next2Refresh
-			cache.m.RUnlock()
-			if entry == nil || len(entry.Fqdn()) < 1 {
-				continue
+		case op := <-c:
+			switch op.op {
+			case opAdd:
+				if de, e := cache.lookupOrResolve(op.fqdn); de != nil && e == nil {
+					log.L().Debugf("Added %s to the cache.", op.fqdn)
+				} else {
+					log.L().Debugf("Adding %s failed with %v", op.fqdn, e)
+				}
+
+			case opRemove:
+				if e := cache.remove(op.fqdn); e != nil {
+					log.L().Errorf("Remove failed: %v.", e)
+				}
+			case opClear:
+				cache.clear()
+			case opQuit:
+				return
 			}
-			if e := resolve(entry); cache.next2Refresh != nil && e != nil {
-				log.L().Panicf("unable to resolve cache entry (%e)", e)
+		case <-time.After(time.Duration(ttl) * time.Second):
+
+			if e := resolve(cache.getNextRefresh()); e != nil {
+				log.L().Errorf("Refresh failed: %v.", e)
 			}
+			ttl = calcTTL(cache.getNextRefresh())
 		}
 	}
 }

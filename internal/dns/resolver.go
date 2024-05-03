@@ -8,10 +8,25 @@ import (
 	"github.com/red55/bgp-dns-peer/internal/log"
 	"net"
 	"os"
-	"time"
 )
 
 const dot = string('.')
+
+type errNXName struct{}
+
+func (e *errNXName) Error() string {
+	return "NX Name Error"
+}
+
+func resolverOnConfigChange() {
+
+	setResolvers(cfg.AppCfg.Resolvers())
+
+	ResolverClear()
+	for _, n := range cfg.AppCfg.Names() {
+		ResolverEnqueue(n)
+	}
+}
 
 func queryDns(q *dns.Msg) (*dns.Msg, error) {
 	_resolvers.m.RLock()
@@ -36,7 +51,7 @@ func queryDns(q *dns.Msg) (*dns.Msg, error) {
 			_resolvers.current = _resolvers.current.Next()
 
 			if head == _resolvers.current {
-				log.L().Errorf("tried all DNS servers, set current entry TTL to %s: %v")
+				log.L().Errorf("All DNS Servers didn't answer")
 
 				if errors.Is(e, os.ErrDeadlineExceeded) {
 					return nil, errors.Join(fmt.Errorf("DNS operation for %v failed ", q.Question), e)
@@ -84,51 +99,55 @@ func Resolve(de *Entry) error {
 
 	if r, e := queryDns(q); e != nil {
 		return e
-	} else { // r.Rcode == dns.RcodeSuccess
-		de.r = r
-		ips := make([]string, 0, len(r.Answer))
-		for _, rr := range r.Answer {
-			if a, ok := rr.(*dns.A); ok {
-				ttl := time.Duration(a.Hdr.Ttl) * time.Second
+	} else {
 
-				if ttl == 0 {
-					de.SetTtl(cfg.AppCfg.Timeouts().TTL())
-				} else {
-					de.SetTtl(ttl)
+		if r.Rcode == dns.RcodeSuccess {
+			de.r = r
+			de.ips = make([]string, 0, len(r.Answer))
+			for _, rr := range r.Answer {
+				if a, ok := rr.(*dns.A); ok {
+					ttl := a.Hdr.Ttl
+
+					if ttl == 0 {
+						de.SetTtl(cfg.AppCfg.Timeouts().DefaultTTL())
+					} else {
+						de.SetTtl(ttl)
+					}
+
+					de.ips = append(de.ips, a.A.String())
 				}
-
-				ips = append(ips, a.A.String())
 			}
-
-			de.ips = ips
 			log.L().Debugf("Resolved: %v", de)
+		} else {
+			return fmt.Errorf("DNS server answered bad RCode %d, %w", r.Rcode, &errNXName{})
 		}
+
 	}
 	return nil
 }
 
 func resolve(de *Entry) error {
-	if e := Resolve(de); e == nil {
-		var found = cache.findLeastTTLCacheEntry()
-		log.L().Debugf("Found least TTL cache entry: %v", found)
-		cache.setNextRefreshEntry(found)
+	if de == nil || len(de.Fqdn()) < 1 {
+		// obliviously we need to return special error class and ignore it in the caller, but now just
+		// behave as it normal.
 		return nil
-	} else {
-		log.L().Debugf("resolve failed for %s: %v", de.Fqdn(), e)
-		return e
 	}
-}
 
-func resolver(c chan string) {
-	for v := range c {
-		var de *Entry = nil
+	e := Resolve(de)
 
-		if found := cache.findCacheEntry(v); found == nil {
-			de = cache.addCacheEntry(v)
-		}
+	var found = cache.findLeastTTLCacheEntry(true)
+	log.L().Debugf("Found least DefaultTTL cache entry: %v", found)
+	cache.setNextRefresh(found)
 
-		if e := resolve(de); e != nil {
-			log.L().Debugf("Resolve failed for %s: %v", v, e)
-		}
+	if e == nil {
+		return nil
 	}
+
+	if errors.Is(e, &errNXName{}) {
+		log.L().Debugf("Remove from cache %s as it is NXDOMAIN",
+			de.Fqdn())
+		e = cache.remove(de.Fqdn())
+	}
+
+	return e
 }
