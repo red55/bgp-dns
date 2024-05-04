@@ -1,5 +1,21 @@
 Logging:
   Level: Debug
+Bgp:
+  Asn: 65530
+  Id: 192.168.151.250
+  Listen:
+    Ip: 0.0.0.0
+    Port: 1179
+  Communities:
+    - 65530:888
+  Peers:
+    - Asn: 65530
+      Addr:
+        Ip: 192.168.151.41
+        Port: 179
+      Communities:
+        - 65530:777
+
 Resolvers:
   - Ip: 8.8.4.4
     Port: 53
@@ -10,10 +26,15 @@ Responder:
   Port: 8053
 Timeouts:
   DefaultTTL: 60
-
-names:
-  - intel.com
-  - bb.intel.com
-  - tt.csi.group
-  - tt2.csi.group
-  - ya.ru
+Names:
+  - www.intel.com
+  #- yt3.ggpht.com
+  #- www.digitalocean.com
+  #- digitalocean.com
+  #- www.cadillac.com
+  #- brands.gm-cdn.com
+  #- www.svoboda.org
+  #- cloud.ibm.com
+  #- ibm.com
+  #- www.ibm.com
+  #- dataplatform.cloud.ibm.com

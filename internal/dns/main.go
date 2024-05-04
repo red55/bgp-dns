@@ -21,7 +21,6 @@ func (r *resovlerT) String() string {
 type resolversT struct {
 	m         sync.RWMutex
 	resolvers *ring.Ring
-	current   *ring.Ring
 }
 
 var _resolvers resolversT
@@ -38,20 +37,19 @@ func setResolvers(resolvers []*net.UDPAddr) {
 
 	l := len(resolvers)
 	_resolvers.resolvers = ring.New(l)
-	_resolvers.current = _resolvers.resolvers
 
 	for i := 0; i < l; i++ {
-		_resolvers.current.Value = &resovlerT{
+		_resolvers.resolvers.Value = &resovlerT{
 			resolvers[i],
 			true,
 		}
-		_resolvers.current = _resolvers.current.Next()
+		_resolvers.resolvers = _resolvers.resolvers.Next()
 	}
 }
 
 func Init() {
 	// Clear dns cache and resolve configured dns names
-	_ = cfg.RegisterConfigChangeHandler(resolverOnConfigChange)
+	_ = cfg.RegisterConfigChangeHandler(resolveOnConfigChange)
 	_ = cfg.RegisterConfigChangeHandler(responderOnConfigChange)
 
 	dns.HandleFunc(".", proxyQuery)
@@ -68,7 +66,7 @@ func Init() {
 
 	go refresher(chanRefresher)
 
-	resolverOnConfigChange()
+	resolveOnConfigChange()
 	responderOnConfigChange()
 }
 
@@ -80,14 +78,14 @@ func Deinit() {
 	close(chanRefresher)
 }
 
-func ResolverEnqueue(fqdn string) {
+func CacheEnqueue(fqdn string) {
 	chanRefresher <- &msg{
 		op:   opAdd,
 		fqdn: fqdn,
 	}
 }
 
-func ResolverClear() {
+func CacheClear() {
 	chanRefresher <- &msg{
 		op: opClear,
 	}

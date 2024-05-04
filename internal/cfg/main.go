@@ -30,8 +30,8 @@ var changeHandlers = ConfigChangeHandlerRegistry{
 
 func init() {
 	AppCfg = &appCfgT{
-		Rslvrs: []addrT{
-			{Ip: net.ParseIP("8.8.8.8"), Port: 53},
+		Rslvrs: []*net.UDPAddr{
+			{IP: net.ParseIP("8.8.8.8"), Port: 53},
 		},
 		Touts: &appCfgTimeoutsT{
 			DfltTtl: 30,
@@ -94,7 +94,7 @@ func readConfig() {
 	}
 
 	if e := viper.Unmarshal(&AppCfg, func(config *mapstructure.DecoderConfig) {
-		config.TagName = "yaml"
+		config.TagName = "json"
 		config.DecodeHook = mapstructure.ComposeDecodeHookFunc(func(from reflect.Type, to reflect.Type, data interface{}) (interface{}, error) {
 
 			if from.Kind() == reflect.String {
@@ -119,6 +119,9 @@ func readConfig() {
 }
 
 func fireOnChange() {
+
+	_ = log.FireConfigChanged(AppCfg.Log())
+
 	m.RLock()
 	defer m.RUnlock()
 

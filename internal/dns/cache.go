@@ -2,6 +2,7 @@ package dns
 
 import (
 	"fmt"
+	"github.com/red55/bgp-dns-peer/internal/log"
 	"slices"
 	"sync"
 )
@@ -26,6 +27,12 @@ func (c *Cache) String() string {
 }
 
 var cache *Cache
+
+func (c *Cache) updateNextRefresh(lock bool) {
+	found := c.findLeastTTLCacheEntry(lock)
+	log.L().Debugf("Found least DefaultTTL cache entry: %v", found)
+	c.setNextRefresh(found)
+}
 
 func (c *Cache) findLeastTTLCacheEntry(lock bool) *Entry {
 	if lock {
@@ -59,18 +66,20 @@ func (c *Cache) find(dnsName string) *Entry {
 		return nil
 	}
 }
-func (c *Cache) add(dnsName string) *Entry {
-	var de = NewEntry(dnsName)
+func (c *Cache) add(fqdn string) (*Entry, error) {
+	var entry = c.find(fqdn)
+	var e error = nil
+	if entry == nil {
 
-	c.m.Lock()
-	defer c.m.Unlock()
+		entry = NewEntry(fqdn)
+		c.m.Lock()
+		c.entries = append(c.entries, entry)
+		c.m.Unlock()
 
-	c.entries = append(c.entries, de)
-	if len(c.entries) == 1 {
-		c.nextRefresh = c.entries[0]
+		e = resolve(entry)
 	}
 
-	return de
+	return entry, e
 }
 
 func (c *Cache) getNextRefresh() *Entry {
@@ -87,15 +96,6 @@ func (c *Cache) setNextRefresh(next *Entry) {
 	c.nextRefresh = next
 }
 
-func (c *Cache) lookupOrResolve(dnsName string) (*Entry, error) {
-	var de = c.find(dnsName)
-	var e error = nil
-	if de == nil {
-		de = c.add(dnsName)
-		e = resolve(de)
-	}
-	return de, e
-}
 func (c *Cache) remove(fqdn string) error {
 	c.m.Lock()
 	defer c.m.Unlock()
@@ -104,9 +104,10 @@ func (c *Cache) remove(fqdn string) error {
 	if found == -1 {
 		return fmt.Errorf("entry not found")
 	}
+
 	c.entries[found] = c.entries[len(c.entries)-1]
 	c.entries = c.entries[:len(c.entries)-1]
-	c.nextRefresh = c.findLeastTTLCacheEntry(false)
+	c.updateNextRefresh(false)
 
 	return nil
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/red55/bgp-dns-peer/internal/bgp"
 	"github.com/red55/bgp-dns-peer/internal/cfg"
 	"github.com/red55/bgp-dns-peer/internal/dns"
 	"github.com/red55/bgp-dns-peer/internal/log"
@@ -21,13 +22,12 @@ func main() {
 	}
 	defer log.Deinit()
 	// Reload Logging configuration
-	_ = cfg.RegisterConfigChangeHandler(func() {
-		_ = log.FireConfigChanged(cfg.AppCfg.Log())
-	},
-	)
 
 	dns.Init()
 	defer dns.Deinit()
+
+	bgp.Init()
+	defer bgp.Deinit()
 
 	log.L().Info("Waiting for termination signal")
 	sig := make(chan os.Signal)

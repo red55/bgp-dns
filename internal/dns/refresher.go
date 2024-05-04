@@ -31,7 +31,7 @@ func calcTTL(de *Entry) uint32 {
 		if t > 0 {
 			ttl = uint32(t)
 		} else {
-			log.L().Errorf("Looks like %v already expired. Missed time %f.", de, t)
+			log.L().Warnf("Looks like %v already expired. Missed time %f.", de, t)
 		}
 
 		log.L().Infof("Refresher will sleep for %ds until %s for %s", ttl, de.Expire(),
@@ -49,7 +49,7 @@ func refresher(c chan *msg) {
 		case op := <-c:
 			switch op.op {
 			case opAdd:
-				if de, e := cache.lookupOrResolve(op.fqdn); de != nil && e == nil {
+				if _, e := cache.add(op.fqdn); e == nil {
 					log.L().Debugf("Added %s to the cache.", op.fqdn)
 				} else {
 					log.L().Debugf("Adding %s failed with %v", op.fqdn, e)

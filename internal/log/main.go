@@ -36,6 +36,7 @@ func Init(cfg *zap.Config) error {
 
 	_m.Lock()
 	defer _m.Unlock()
+
 	if _logger != nil && _wasInit {
 		return nil
 	}

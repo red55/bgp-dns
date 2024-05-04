@@ -18,13 +18,13 @@ func (e *errNXName) Error() string {
 	return "NX Name Error"
 }
 
-func resolverOnConfigChange() {
+func resolveOnConfigChange() {
 
 	setResolvers(cfg.AppCfg.Resolvers())
 
-	ResolverClear()
+	CacheClear()
 	for _, n := range cfg.AppCfg.Names() {
-		ResolverEnqueue(n)
+		CacheEnqueue(n)
 	}
 }
 
@@ -32,13 +32,13 @@ func queryDns(q *dns.Msg) (*dns.Msg, error) {
 	_resolvers.m.RLock()
 	defer _resolvers.m.RUnlock()
 
-	if _resolvers.current == nil || _resolvers.resolvers == nil {
+	if _resolvers.resolvers == nil || _resolvers.resolvers.Len() < 1 {
 		return nil, fmt.Errorf("resolvers are empty, cannot resolve")
 	}
 
-	head := _resolvers.current
+	head := _resolvers.resolvers
 	for {
-		srv := _resolvers.current.Value.(*resovlerT)
+		srv := _resolvers.resolvers.Value.(*resovlerT)
 		log.L().Debugf("Using DNS server %v", srv)
 
 		if r, e := dns.Exchange(q, srv.addr.String()); e == nil {
@@ -48,9 +48,9 @@ func queryDns(q *dns.Msg) (*dns.Msg, error) {
 			srv.ok = false
 			log.L().Debugf("queryDns failed for %v: %v", q.Question, e)
 
-			_resolvers.current = _resolvers.current.Next()
+			_resolvers.resolvers = _resolvers.resolvers.Next()
 
-			if head == _resolvers.current {
+			if head == _resolvers.resolvers {
 				log.L().Errorf("All DNS Servers didn't answer")
 
 				if errors.Is(e, os.ErrDeadlineExceeded) {
@@ -100,7 +100,6 @@ func Resolve(de *Entry) error {
 	if r, e := queryDns(q); e != nil {
 		return e
 	} else {
-
 		if r.Rcode == dns.RcodeSuccess {
 			de.r = r
 			de.ips = make([]string, 0, len(r.Answer))
@@ -126,27 +125,27 @@ func Resolve(de *Entry) error {
 	return nil
 }
 
-func resolve(de *Entry) error {
-	if de == nil || len(de.Fqdn()) < 1 {
+func resolve(entry *Entry) error {
+	if entry == nil || len(entry.Fqdn()) < 1 {
 		// obliviously we need to return special error class and ignore it in the caller, but now just
 		// behave as it normal.
 		return nil
 	}
+	previps := make([]string, len(entry.ips))
+	copy(previps, entry.ips)
+	e := Resolve(entry)
 
-	e := Resolve(de)
-
-	var found = cache.findLeastTTLCacheEntry(true)
-	log.L().Debugf("Found least DefaultTTL cache entry: %v", found)
-	cache.setNextRefresh(found)
+	cache.updateNextRefresh(true)
 
 	if e == nil {
+		fireCallbacks(entry.Fqdn(), previps, entry.ips)
 		return nil
 	}
 
 	if errors.Is(e, &errNXName{}) {
 		log.L().Debugf("Remove from cache %s as it is NXDOMAIN",
-			de.Fqdn())
-		e = cache.remove(de.Fqdn())
+			entry.Fqdn())
+		e = cache.remove(entry.Fqdn())
 	}
 
 	return e

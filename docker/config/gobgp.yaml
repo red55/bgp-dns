@@ -1,0 +1,34 @@
+global:
+  config:
+    as: 65530
+    router-id: 192.168.151.250
+    port: 179
+  apply-policy:
+    config:
+      # default-import-policy: reject-route
+      default-export-policy: accept-route
+      export-policy-list:
+        - policy2
+
+neighbors:
+  - config:
+      neighbor-address: 192.168.151.41
+      peer-as: 65530
+
+defined-sets:
+  neighbor-sets:
+    - neighbor-set-name: ixp-neighbors
+      neighbor-info-list:
+        - 192.168.151.41
+
+policy-definitions:
+  - name: policy2
+    statements:
+      - actions:
+          bgp-actions:
+            set-next-hop: 1.1.1.1
+            set-community:
+              options: add
+              set-community-method:
+                communities-list:
+                  - "65530:666"
