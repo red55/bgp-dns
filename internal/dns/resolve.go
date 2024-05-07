@@ -20,7 +20,8 @@ func (e *errNXName) Error() string {
 
 func resolveOnConfigChange() {
 
-	setResolvers(cfg.AppCfg.Resolvers())
+	_resolvers.setResolvers(cfg.AppCfg.Resolvers())
+	_defaultResolvers.setResolvers(cfg.AppCfg.DefaultResolvers())
 
 	CacheClear()
 	for _, n := range cfg.AppCfg.Names() {
@@ -28,29 +29,29 @@ func resolveOnConfigChange() {
 	}
 }
 
-func queryDns(q *dns.Msg) (*dns.Msg, error) {
-	_resolvers.m.RLock()
-	defer _resolvers.m.RUnlock()
+func (r *resolversT) queryDns(q *dns.Msg) (*dns.Msg, error) {
+	r.m.RLock()
+	defer r.m.RUnlock()
 
-	if _resolvers.resolvers == nil || _resolvers.resolvers.Len() < 1 {
+	if r.resolvers == nil || r.resolvers.Len() < 1 {
 		return nil, fmt.Errorf("resolvers are empty, cannot resolve")
 	}
 
-	head := _resolvers.resolvers
+	head := r.resolvers
 	for {
-		srv := _resolvers.resolvers.Value.(*resovlerT)
+		srv := r.resolvers.Value.(*resovlerT)
 		log.L().Debugf("Using DNS server %v", srv)
 
-		if r, e := dns.Exchange(q, srv.addr.String()); e == nil {
+		if a, e := dns.Exchange(q, srv.addr.String()); e == nil {
 			srv.ok = true
-			return r, nil
+			return a, nil
 		} else {
 			srv.ok = false
 			log.L().Debugf("queryDns failed for %v: %v", q.Question, e)
 
-			_resolvers.resolvers = _resolvers.resolvers.Next()
+			r.resolvers = r.resolvers.Next()
 
-			if head == _resolvers.resolvers {
+			if head == r.resolvers {
 				log.L().Errorf("All DNS Servers didn't answer")
 
 				if errors.Is(e, os.ErrDeadlineExceeded) {
@@ -71,8 +72,8 @@ func queryDns(q *dns.Msg) (*dns.Msg, error) {
 					return nil, cause
 				default:
 					var rCode = -1
-					if r != nil {
-						rCode = r.Rcode
+					if a != nil {
+						rCode = a.Rcode
 					}
 					return nil, errors.Join(fmt.Errorf("failed to dail %s, Rcode: %x", srv.addr, rCode), e)
 				}
@@ -97,7 +98,7 @@ func Resolve(de *Entry) error {
 	q := new(dns.Msg)
 	q.SetQuestion(de.fqdn, dns.TypeA)
 
-	if r, e := queryDns(q); e != nil {
+	if r, e := _resolvers.queryDns(q); e != nil {
 		return e
 	} else {
 		if r.Rcode == dns.RcodeSuccess {

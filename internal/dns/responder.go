@@ -9,7 +9,7 @@ import (
 func proxyQuery(w dns.ResponseWriter, rq *dns.Msg) {
 	log.L().Debugf("Proxying request %v from: %s", rq, w.RemoteAddr().String())
 
-	if r, e := queryDns(rq); e != nil {
+	if r, e := _defaultResolvers.queryDns(rq); e != nil {
 		log.L().Errorf("Forwarding response to upstream responder failed %v", e)
 	} else {
 		if e = w.WriteMsg(r); e != nil {

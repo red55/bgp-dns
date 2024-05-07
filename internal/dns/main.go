@@ -23,7 +23,7 @@ type resolversT struct {
 	resolvers *ring.Ring
 }
 
-var _resolvers resolversT
+var _resolvers, _defaultResolvers resolversT
 
 func init() {
 	cache = &Cache{}
@@ -31,19 +31,19 @@ func init() {
 	chanRefresher = make(chan *msg)
 }
 
-func setResolvers(resolvers []*net.UDPAddr) {
-	_resolvers.m.Lock()
-	defer _resolvers.m.Unlock()
+func (r *resolversT) setResolvers(resolvers []*net.UDPAddr) {
+	r.m.Lock()
+	defer r.m.Unlock()
 
 	l := len(resolvers)
-	_resolvers.resolvers = ring.New(l)
+	r.resolvers = ring.New(l)
 
 	for i := 0; i < l; i++ {
-		_resolvers.resolvers.Value = &resovlerT{
+		r.resolvers.Value = &resovlerT{
 			resolvers[i],
 			true,
 		}
-		_resolvers.resolvers = _resolvers.resolvers.Next()
+		r.resolvers = r.resolvers.Next()
 	}
 }
 

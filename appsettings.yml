@@ -11,11 +11,17 @@ Bgp:
   Peers:
     - Asn: 65530
       Addr:
-        Ip: 192.168.151.41
-        Port: 179
-      Communities:
-        - 65530:777
-
+       Ip: 192.168.151.41
+       Port: 179
+#    - Asn: 65531
+#      Addr:
+#        Ip: 192.168.151.43
+#        Port: 179
+DefaultResolvers:
+  - Ip: 77.88.8.1
+    Port: 53
+  - Ip: 77.88.8.8
+    Port: 53
 Resolvers:
   - Ip: 8.8.4.4
     Port: 53
@@ -27,7 +33,7 @@ Responder:
 Timeouts:
   DefaultTTL: 60
 Names:
-  - www.intel.com
+  - intel.com
   #- yt3.ggpht.com
   #- www.digitalocean.com
   #- digitalocean.com

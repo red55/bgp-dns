@@ -9,6 +9,8 @@ import (
 	"github.com/red55/bgp-dns-peer/internal/log"
 	apb "google.golang.org/protobuf/types/known/anypb"
 	"net"
+	"net/netip"
+	"slices"
 )
 
 type operation int
@@ -48,14 +50,11 @@ func Remove(ip net.IP) {
 		},
 	}
 }
-func add(prefix *bgpapi.IPAddressPrefix) error {
-	if prefix == nil {
-		return fmt.Errorf("prefix is nil")
-	}
+func newPath(prefix *bgpapi.IPAddressPrefix) *bgpapi.Path {
 	nlri, _ := apb.New(prefix)
 
 	a1, _ := apb.New(&bgpapi.OriginAttribute{
-		Origin: 0,
+		Origin: 1, // IGP
 	})
 	a2, _ := apb.New(&bgpapi.NextHopAttribute{
 		NextHop: cfg.AppCfg.Bgp.Id,
@@ -68,18 +67,21 @@ func add(prefix *bgpapi.IPAddressPrefix) error {
 			},
 		},
 	})
-	/*
-		a4, _ := apb.New(&bgpapi.CommunitiesAttribute{
-			Communities: comms,
-		})*/
-	attrs := []*apb.Any{a1, a2, a3 /*, a4*/}
+	attrs := []*apb.Any{a1, a2, a3}
+	return &bgpapi.Path{
+		Family: v4Family,
+		Nlri:   nlri,
+		Pattrs: attrs,
+	}
+}
+func add(prefix *bgpapi.IPAddressPrefix) error {
+	if prefix == nil {
+		return fmt.Errorf("prefix is nil")
+	}
 
+	log.L().Infof("Adding prefix: %s", prefix.String())
 	if _, e := server.AddPath(context.Background(), &bgpapi.AddPathRequest{
-		Path: &bgpapi.Path{
-			Family: &bgpapi.Family{Afi: bgpapi.Family_AFI_IP, Safi: bgpapi.Family_SAFI_UNICAST},
-			Nlri:   nlri,
-			Pattrs: attrs,
-		},
+		Path: newPath(prefix),
 	}); e != nil {
 		return fmt.Errorf("unable to add path: %v, %w", prefix, e)
 	}
@@ -87,33 +89,43 @@ func add(prefix *bgpapi.IPAddressPrefix) error {
 	return nil
 }
 
-func find(prefix *bgpapi.IPAddressPrefix) (*bgpapi.IPAddressPrefix, error) {
-	var found = false
-	if prefix == nil {
-		e := errors.New("prefix is nil")
+func find(prefixes []*bgpapi.IPAddressPrefix) (found *bgpapi.IPAddressPrefix, e error) {
+	found = nil
+	if prefixes == nil {
+		e = errors.New("prefix is nil")
 		log.L().Warnf(e.Error())
-		return nil, e
-	}
-	if e := server.ListPath(context.Background(), &bgpapi.ListPathRequest{
-		Family: v4Family,
-		Prefixes: []*bgpapi.TableLookupPrefix{
-			{
-				Prefix: prefix.Prefix,
-			},
-		},
-	}, func(dst *bgpapi.Destination) {
-		if dst.Prefix == prefix.Prefix {
-			found = true
-		}
-	}); e != nil {
-		return nil, e
+		return found, e
 	}
 
-	if found {
-		return prefix, nil
-	} else {
-		return nil, nil
+	tl := make([]*bgpapi.TableLookupPrefix, len(prefixes))
+	for i, p := range prefixes {
+		tl[i] = &bgpapi.TableLookupPrefix{
+			Prefix: fmt.Sprintf("%s/%d", p.Prefix, p.PrefixLen),
+			Type:   bgpapi.TableLookupPrefix_SHORTER,
+		}
 	}
+
+	if e := server.ListPath(context.Background(), &bgpapi.ListPathRequest{
+		TableType: bgpapi.TableType_GLOBAL,
+		Family:    v4Family,
+		Prefixes:  tl,
+	}, func(dst *bgpapi.Destination) {
+		p1, _ := netip.ParsePrefix(dst.Prefix)
+		slices.IndexFunc(prefixes, func(prefix *bgpapi.IPAddressPrefix) bool {
+			p2, _ := netip.ParsePrefix(fmt.Sprintf("%s/%d", prefix.Prefix, prefix.PrefixLen))
+
+			if p1.Overlaps(p2) {
+				found = prefix
+				return true
+			} else {
+				return false
+			}
+		})
+	}); e != nil {
+		return found, e
+	}
+
+	return found, nil
 }
 
 func remove(prefix *bgpapi.IPAddressPrefix) error {
@@ -121,9 +133,12 @@ func remove(prefix *bgpapi.IPAddressPrefix) error {
 		return fmt.Errorf("prefix is nil")
 	}
 
-	found, _ := find(prefix)
-	if found == nil {
-		return nil
+	found, _ := find([]*bgpapi.IPAddressPrefix{prefix})
+	if found != nil {
+		e := server.DeletePath(context.Background(), &bgpapi.DeletePathRequest{
+			Path: newPath(prefix),
+		})
+		return e
 	}
 	return fmt.Errorf("prefix %s is not found", prefix.String())
 }

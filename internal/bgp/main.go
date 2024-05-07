@@ -2,10 +2,6 @@ package bgp
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/binary"
-	"encoding/hex"
-	"fmt"
 	bgpapi "github.com/osrg/gobgp/v3/api"
 	bgpsrv "github.com/osrg/gobgp/v3/pkg/server"
 	"github.com/red55/bgp-dns-peer/internal/cfg"
@@ -13,7 +9,6 @@ import (
 	"github.com/red55/bgp-dns-peer/internal/log"
 	"github.com/red55/bgp-dns-peer/internal/utils"
 	"net"
-	"slices"
 )
 
 var (
@@ -24,6 +19,10 @@ func init() {
 	chanRefresher = make(chan *bgpOp)
 
 	server = bgpsrv.NewBgpServer(bgpsrv.LoggerOption(NewZapLogrusOverride()))
+	_ = server.SetLogLevel(context.Background(), &bgpapi.SetLogLevelRequest{
+		Level: 0xFFFFFFF,
+	})
+
 	go server.Serve()
 }
 
@@ -51,9 +50,76 @@ func onConfigChange() {
 			RouterId:        cfg.AppCfg.Bgp.Id,
 			ListenAddresses: []string{cfg.AppCfg.Bgp.Listen.IP.String()},
 			ListenPort:      int32(cfg.AppCfg.Bgp.Listen.Port),
+			ApplyPolicy: &bgpapi.ApplyPolicy{
+				ExportPolicy: &bgpapi.PolicyAssignment{
+					DefaultAction: bgpapi.RouteAction_ACCEPT,
+				},
+			},
 		},
 	}); e != nil {
 		log.L().Panic("Failed to start bgp server %v", e)
+	}
+	policy := bgpapi.AddPolicyRequest{
+		Policy: &bgpapi.Policy{
+			Name: "global-out",
+			Statements: []*bgpapi.Statement{
+				{
+					Actions: &bgpapi.Actions{
+						RouteAction: bgpapi.RouteAction_ACCEPT,
+					},
+				},
+			},
+		},
+		ReferExistingStatements: false,
+	}
+
+	if len(cfg.AppCfg.Bgp.Communities) > 0 {
+		policy.Policy.Statements[0].Actions.Community = &bgpapi.CommunityAction{
+			Type:        bgpapi.CommunityAction_ADD,
+			Communities: cfg.AppCfg.Bgp.Communities,
+		}
+	}
+
+	if e := server.AddPolicy(context.Background(), &policy); e != nil {
+		log.L().Panicf("Failed to add policy %v", e)
+	}
+
+	if e := server.SetPolicyAssignment(context.Background(), &bgpapi.SetPolicyAssignmentRequest{
+		Assignment: &bgpapi.PolicyAssignment{
+			Name:      "global",
+			Direction: bgpapi.PolicyDirection_EXPORT,
+			Policies: []*bgpapi.Policy{
+				{
+					Name: "global-out",
+				},
+			},
+			DefaultAction: bgpapi.RouteAction_ACCEPT,
+		},
+	}); e != nil {
+		log.L().Warnf("Failed to set global policy assignment: %v", e)
+	} /*
+		table := &bgpapi.WatchEventRequest_Table{
+			Filters: []*bgpapi.WatchEventRequest_Table_Filter{
+				{
+					Type: bgpapi.WatchEventRequest_Table_Filter_ADJIN,
+					Init: true,
+				},
+			},
+		}
+	*/
+	if e := server.WatchEvent(context.Background(), &bgpapi.WatchEventRequest{
+		Peer: &bgpapi.WatchEventRequest_Peer{},
+		Table: &bgpapi.WatchEventRequest_Table{
+			Filters: []*bgpapi.WatchEventRequest_Table_Filter{
+				{
+					Type: bgpapi.WatchEventRequest_Table_Filter_ADJIN,
+				},
+			},
+		},
+	}, func(event *bgpapi.WatchEventResponse) {
+		log.L().Debug(event)
+	}); e != nil {
+		log.L().Warnf("Failed to watch table %v", e)
 	}
 	for _, peer := range cfg.AppCfg.Bgp.Peers {
 		var pol *bgpapi.ApplyPolicy
@@ -61,72 +127,27 @@ func onConfigChange() {
 		if peer.Asn == cfg.AppCfg.Bgp.Asn {
 			pol = &bgpapi.ApplyPolicy{
 				ImportPolicy: &bgpapi.PolicyAssignment{
-					DefaultAction: bgpapi.RouteAction_ACCEPT,
 					Direction:     bgpapi.PolicyDirection_IMPORT,
+					DefaultAction: bgpapi.RouteAction_ACCEPT,
 				},
 				ExportPolicy: &bgpapi.PolicyAssignment{
-					DefaultAction: bgpapi.RouteAction_ACCEPT,
 					Direction:     bgpapi.PolicyDirection_EXPORT,
+					DefaultAction: bgpapi.RouteAction_ACCEPT,
 				},
 			}
 		} else {
 			pol = &bgpapi.ApplyPolicy{
 				ImportPolicy: &bgpapi.PolicyAssignment{
-					DefaultAction: bgpapi.RouteAction_ACCEPT,
 					Direction:     bgpapi.PolicyDirection_IMPORT,
+					DefaultAction: bgpapi.RouteAction_ACCEPT,
 				},
 				ExportPolicy: &bgpapi.PolicyAssignment{
-					Direction:     bgpapi.PolicyDirection_EXPORT,
 					DefaultAction: bgpapi.RouteAction_REJECT,
+					Direction:     bgpapi.PolicyDirection_EXPORT,
 				},
 			}
 		}
-		if len(peer.Communities) > 0 {
-			portBytes := make([]byte, 8)
-			binary.LittleEndian.PutUint64(portBytes, uint64(peer.Addr.Port))
-			m5 := md5.Sum(append(peer.Addr.IP, portBytes...))
-			hx := hex.EncodeToString(m5[:])
-			name := fmt.Sprintf("%s_export_pol_1", hx)
 
-			if e := server.AddStatement(context.Background(), &bgpapi.AddStatementRequest{
-				Statement: &bgpapi.Statement{
-					Name: fmt.Sprintf("%s_stmt_1", name),
-					Actions: &bgpapi.Actions{
-						RouteAction: bgpapi.RouteAction_ACCEPT,
-						Community: &bgpapi.CommunityAction{
-							Type:        bgpapi.CommunityAction_ADD,
-							Communities: peer.Communities,
-						},
-					},
-				},
-			}); e != nil {
-				log.L().Panic("Failed to add statement %v", e)
-			}
-
-			policy := bgpapi.AddPolicyRequest{
-				Policy: &bgpapi.Policy{
-					Name: name,
-					Statements: []*bgpapi.Statement{
-						{
-							Conditions: &bgpapi.Conditions{
-								AfiSafiIn: []*bgpapi.Family{v4Family},
-							},
-							Name: fmt.Sprintf("%s_stmt_1", name),
-						},
-					},
-				},
-				ReferExistingStatements: true,
-			}
-			if e := server.AddPolicy(context.Background(), &policy); e != nil {
-				log.L().Panic("Failed to add policy %v", e)
-			}
-
-			pol.ExportPolicy.Policies = []*bgpapi.Policy{
-				{
-					Name: name,
-				},
-			}
-		}
 		if e := server.AddPeer(context.Background(), &bgpapi.AddPeerRequest{
 			Peer: &bgpapi.Peer{
 				ApplyPolicy: pol,
@@ -134,6 +155,15 @@ func onConfigChange() {
 					NeighborAddress: peer.Addr.IP.String(),
 					PeerAsn:         peer.Asn,
 				},
+
+				Transport: &bgpapi.Transport{
+					PassiveMode: true,
+				},
+				RouteServer: &bgpapi.RouteServer{
+					RouteServerClient: false,
+					SecondaryRoute:    false,
+				},
+
 				AfiSafis: []*bgpapi.AfiSafi{
 					{
 						Config: &bgpapi.AfiSafiConfig{
@@ -148,6 +178,10 @@ func onConfigChange() {
 		}
 	}
 
+	_ = server.ListPolicyAssignment(context.Background(), &bgpapi.ListPolicyAssignmentRequest{},
+		func(pa *bgpapi.PolicyAssignment) {
+			log.L().Debug(pa)
+		})
 }
 
 func Init() {
@@ -158,33 +192,18 @@ func Init() {
 
 	go loop(chanRefresher)
 }
-func alreadyInBgp(prefixes []string) (bool, error) {
+func knownNlri(prefixes []string) (bool, error) {
 	// Assume all prefixes are /32
-	prfxs := make([]string, len(prefixes))
+	prfxs := make([]*bgpapi.IPAddressPrefix, len(prefixes))
 	for i, prefix := range prefixes {
-		prfxs[i] = fmt.Sprintf("%s/32", prefix)
-	}
-	filter := make([]*bgpapi.TableLookupPrefix, len(prefixes))
-	for i, p := range prfxs {
-		filter[i] = &bgpapi.TableLookupPrefix{
-			Prefix: p,
-			Type:   bgpapi.TableLookupPrefix_EXACT,
+		prfxs[i] = &bgpapi.IPAddressPrefix{
+			PrefixLen: 32,
+			Prefix:    prefix,
 		}
 	}
 
-	found := false
-	e := server.ListPath(context.Background(), &bgpapi.ListPathRequest{
-		Family:   v4Family,
-		Prefixes: filter,
-		SortType: bgpapi.ListPathRequest_PREFIX,
-	}, func(dst *bgpapi.Destination) {
-		idx := slices.Index(prfxs, dst.Prefix)
-		if idx >= 0 {
-			found = true
-		}
-	})
-
-	return found, e
+	p, e := find(prfxs)
+	return p != nil, e
 }
 func onDnsResolved(fqdn string, previps, ips []string) {
 	var gone = utils.Difference(previps, ips)
@@ -192,17 +211,19 @@ func onDnsResolved(fqdn string, previps, ips []string) {
 
 	//No changes in IPs
 	if gone == nil && arrived == nil {
-		b, e := alreadyInBgp(ips)
+		b, e := knownNlri(ips)
 		if e != nil {
 			log.L().Error("Failed search in BGP tables: %v", e)
 		}
 		if b {
+			log.L().Debugf("Prefixes already in global table")
 			return
 		} else {
+			log.L().Debugf("Will add prefixes to global table")
 			arrived = ips
 		}
-
 	}
+
 	for _, prev := range gone {
 		Remove(net.ParseIP(prev))
 	}
