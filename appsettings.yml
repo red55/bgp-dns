@@ -1,21 +1,26 @@
 Logging:
   Level: Debug
-Bgp:
-  Asn: 65530
-  Id: 192.168.151.250
-  Listen:
-    Ip: 0.0.0.0
-    Port: 1179
-  Communities:
-    - 65530:888
-  Peers:
-    - Asn: 65530
-      Addr:
-       Ip: 192.168.151.41
-       Port: 179
-#    - Asn: 65531
-#      Addr:
-#        Ip: 192.168.151.43
+Routing:
+  Kernel:
+    Inject:
+        Communities:
+          - 65530:111
+  Bgp:
+    Asn: 65530
+    Id: 192.168.151.250
+    Listen:
+      Ip: 0.0.0.0
+      Port: 1179
+    Communities:
+      - 65530:888
+    Peers:
+      - Asn: 65530
+        Addr:
+         Ip: 192.168.151.41
+         Port: 179
+  #    - Asn: 65531
+  #      Addr:
+  #        Ip: 192.168.151.43
 #        Port: 179
 DefaultResolvers:
   - Ip: 77.88.8.1

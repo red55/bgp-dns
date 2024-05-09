@@ -57,13 +57,13 @@ func newPath(prefix *bgpapi.IPAddressPrefix) *bgpapi.Path {
 		Origin: 1, // IGP
 	})
 	a2, _ := apb.New(&bgpapi.NextHopAttribute{
-		NextHop: cfg.AppCfg.Bgp.Id,
+		NextHop: cfg.AppCfg.Routing().Bgp().Id(),
 	})
 	a3, _ := apb.New(&bgpapi.AsPathAttribute{
 		Segments: []*bgpapi.AsSegment{
 			{
 				Type:    2,
-				Numbers: []uint32{cfg.AppCfg.Bgp.Asn},
+				Numbers: []uint32{cfg.AppCfg.Routing().Bgp().Asn()},
 			},
 		},
 	})

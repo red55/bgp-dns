@@ -27,7 +27,7 @@ func init() {
 }
 
 func onConfigChange() {
-	peers := make([]*bgpapi.Peer, 0, len(cfg.AppCfg.Bgp.Peers))
+	peers := make([]*bgpapi.Peer, 0, len(cfg.AppCfg.Routing().Bgp().Peers()))
 	if e := server.ListPeer(context.Background(), &bgpapi.ListPeerRequest{}, func(peer *bgpapi.Peer) {
 		peers = append(peers, peer)
 	}); e != nil {
@@ -46,10 +46,10 @@ func onConfigChange() {
 
 	if e := server.StartBgp(context.Background(), &bgpapi.StartBgpRequest{
 		Global: &bgpapi.Global{
-			Asn:             cfg.AppCfg.Bgp.Asn,
-			RouterId:        cfg.AppCfg.Bgp.Id,
-			ListenAddresses: []string{cfg.AppCfg.Bgp.Listen.IP.String()},
-			ListenPort:      int32(cfg.AppCfg.Bgp.Listen.Port),
+			Asn:             cfg.AppCfg.Routing().Bgp().Asn(),
+			RouterId:        cfg.AppCfg.Routing().Bgp().Id(),
+			ListenAddresses: []string{cfg.AppCfg.Routing().Bgp().Listen().IP.String()},
+			ListenPort:      int32(cfg.AppCfg.Routing().Bgp().Listen().Port),
 			ApplyPolicy: &bgpapi.ApplyPolicy{
 				ExportPolicy: &bgpapi.PolicyAssignment{
 					DefaultAction: bgpapi.RouteAction_ACCEPT,
@@ -73,10 +73,10 @@ func onConfigChange() {
 		ReferExistingStatements: false,
 	}
 
-	if len(cfg.AppCfg.Bgp.Communities) > 0 {
+	if len(cfg.AppCfg.Routing().Bgp().Communities()) > 0 {
 		policy.Policy.Statements[0].Actions.Community = &bgpapi.CommunityAction{
 			Type:        bgpapi.CommunityAction_ADD,
-			Communities: cfg.AppCfg.Bgp.Communities,
+			Communities: cfg.AppCfg.Routing().Bgp().Communities(),
 		}
 	}
 
@@ -121,10 +121,10 @@ func onConfigChange() {
 	}); e != nil {
 		log.L().Warnf("Failed to watch table %v", e)
 	}
-	for _, peer := range cfg.AppCfg.Bgp.Peers {
+	for _, peer := range cfg.AppCfg.Routing().Bgp().Peers() {
 		var pol *bgpapi.ApplyPolicy
 
-		if peer.Asn == cfg.AppCfg.Bgp.Asn {
+		if peer.Asn() == cfg.AppCfg.Routing().Bgp().Asn() {
 			pol = &bgpapi.ApplyPolicy{
 				ImportPolicy: &bgpapi.PolicyAssignment{
 					Direction:     bgpapi.PolicyDirection_IMPORT,
@@ -152,8 +152,8 @@ func onConfigChange() {
 			Peer: &bgpapi.Peer{
 				ApplyPolicy: pol,
 				Conf: &bgpapi.PeerConf{
-					NeighborAddress: peer.Addr.IP.String(),
-					PeerAsn:         peer.Asn,
+					NeighborAddress: peer.Addr().IP.String(),
+					PeerAsn:         peer.Asn(),
 				},
 
 				Transport: &bgpapi.Transport{
@@ -206,6 +206,7 @@ func knownNlri(prefixes []string) (bool, error) {
 	return p != nil, e
 }
 func onDnsResolved(fqdn string, previps, ips []string) {
+	_ = fqdn
 	var gone = utils.Difference(previps, ips)
 	var arrived = utils.Difference(ips, previps)
 
@@ -250,7 +251,7 @@ func loop(ch chan *bgpOp) {
 }
 
 func Deinit() {
-	log.L().Infof("Bgp->Deinit()")
+	log.L().Infof("Rt->Deinit()")
 	chanRefresher <- &bgpOp{
 		op: opQuit,
 	}
