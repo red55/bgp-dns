@@ -18,12 +18,15 @@ func main() {
 
 	pflag.StringP("config", "c", "appsettings.yml", "Path to configuration file.")
 	pflag.Parse()
+
 	fn := pflag.Lookup("config")
-	fp, e := filepath.Abs(fn.Value.String())
+	configPath, e := filepath.Abs(fn.Value.String())
 	if e != nil {
 		log.L().Fatalf("Wrong path to configuration file")
 	}
-	cfg.Init(fp)
+
+	log.L().Infof("My configrution file: %s", configPath)
+	cfg.Init(configPath)
 
 	defer cfg.Deinit()
 

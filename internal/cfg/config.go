@@ -120,7 +120,7 @@ func (act *kernRoutingT) Inject() *kernRoutingInject {
 }
 
 type routingT struct {
-	Bgps *bgpT         `json:"Rt,required"`
+	Bgps *bgpT         `json:"Bgp,required"`
 	Krnl *kernRoutingT `json:"Kernel,omitempty"`
 }
 
