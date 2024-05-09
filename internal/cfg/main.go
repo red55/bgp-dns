@@ -5,7 +5,6 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/mitchellh/mapstructure"
 	"github.com/red55/bgp-dns-peer/internal/log"
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"net"
@@ -43,12 +42,9 @@ func init() {
 	viper.AutomaticEnv()
 }
 
-func Init() {
+func Init(configFile string) {
+	viper.SetConfigFile(configFile)
 
-	pflag.StringP("config", "c", "appsettings.yml", "Path to configuration file.")
-	fn := pflag.Lookup("config")
-
-	viper.SetConfigFile(fn.Value.String())
 	viper.OnConfigChange(func(in fsnotify.Event) {
 		reloadConfig()
 	})
