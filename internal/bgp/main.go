@@ -4,11 +4,15 @@ import (
 	"context"
 	bgpapi "github.com/osrg/gobgp/v3/api"
 	bgpsrv "github.com/osrg/gobgp/v3/pkg/server"
-	"github.com/red55/bgp-dns-peer/internal/cfg"
-	"github.com/red55/bgp-dns-peer/internal/dns"
-	"github.com/red55/bgp-dns-peer/internal/log"
-	"github.com/red55/bgp-dns-peer/internal/utils"
+	"github.com/red55/bgp-dns/internal/cfg"
+	"github.com/red55/bgp-dns/internal/dns"
+	"github.com/red55/bgp-dns/internal/krt"
+	"github.com/red55/bgp-dns/internal/log"
+	"github.com/red55/bgp-dns/internal/utils"
+	"google.golang.org/protobuf/types/known/anypb"
 	"net"
+	"slices"
+	"strconv"
 )
 
 var (
@@ -16,8 +20,6 @@ var (
 )
 
 func init() {
-	chanRefresher = make(chan *bgpOp)
-
 	server = bgpsrv.NewBgpServer(bgpsrv.LoggerOption(NewZapLogrusOverride()))
 	_ = server.SetLogLevel(context.Background(), &bgpapi.SetLogLevelRequest{
 		Level: 0xFFFFFFF,
@@ -108,16 +110,82 @@ func onConfigChange() {
 		}
 	*/
 	if e := server.WatchEvent(context.Background(), &bgpapi.WatchEventRequest{
-		Peer: &bgpapi.WatchEventRequest_Peer{},
+		//Peer: &bgpapi.WatchEventRequest_Peer{},
 		Table: &bgpapi.WatchEventRequest_Table{
 			Filters: []*bgpapi.WatchEventRequest_Table_Filter{
 				{
-					Type: bgpapi.WatchEventRequest_Table_Filter_ADJIN,
+					Type: bgpapi.WatchEventRequest_Table_Filter_BEST,
 				},
 			},
 		},
-	}, func(event *bgpapi.WatchEventResponse) {
-		log.L().Debug(event)
+	}, func(r *bgpapi.WatchEventResponse) {
+		if p := r.GetPeer(); p != nil && p.Type == bgpapi.WatchEventResponse_PeerEvent_STATE {
+			log.L().Infof("PeerEvent_STATE: %v", p)
+		} else if t := r.GetTable(); t != nil {
+			for _, p := range t.Paths {
+				var cs = new(bgpapi.CommunitiesAttribute)
+				var idx = slices.IndexFunc(p.Pattrs, func(a *anypb.Any) bool {
+					return a.TypeUrl == "type.googleapis.com/apipb.CommunitiesAttribute"
+				})
+
+				if idx == -1 {
+					log.L().Debugf("Skiping path %v as it doesn't have community attr", p)
+					continue
+				}
+
+				if e := p.Pattrs[idx].UnmarshalTo(cs); e != nil {
+					log.L().Panicf("Failed to unmarshall communities: %v", e)
+				}
+
+				comms := cfg.AppCfg.Routing().Kernel().Inject().Communities()
+				communitiesMatched := false
+				for _, c := range comms {
+					comm, _ := strconv.Atoi(c)
+					if slices.Index(cs.Communities, uint32(comm)) == -1 {
+						communitiesMatched = true
+						break
+					}
+				}
+
+				if !communitiesMatched {
+					log.L().Debugf("Skiping path %v as it's not marked with communities %v", p, comms)
+					continue
+				}
+
+				var prefix = new(bgpapi.IPAddressPrefix)
+				if e := p.Nlri.UnmarshalTo(prefix); e != nil {
+					log.L().Panicf("Failed to unmarshal prefix: %v", e)
+				}
+
+				idx = slices.IndexFunc(p.Pattrs, func(a *anypb.Any) bool {
+					return a.TypeUrl == "type.googleapis.com/apipb.NextHopAttribute"
+				})
+
+				if idx == -1 {
+					log.L().Warnf("Next hop attribute not found for prefix %v", prefix)
+					return
+				}
+
+				var nha = new(bgpapi.NextHopAttribute)
+				if e := p.Pattrs[idx].UnmarshalTo(nha); e != nil {
+					log.L().Panicf("Failed to unmarshal NextHopAttribute: %v", e)
+				}
+				var n = &net.IPNet{
+					IP:   net.ParseIP(prefix.Prefix),
+					Mask: net.CIDRMask(int(prefix.PrefixLen), int(prefix.PrefixLen)),
+				}
+
+				var m = cfg.AppCfg.Routing().Kernel().Inject().Metric()
+				var nh = net.ParseIP(nha.NextHop)
+				if p.IsWithdraw {
+					krt.Withdraw(n, nh, m)
+				} else /*if p.Best*/ {
+					krt.Advance(n, nh, m)
+				}
+
+				log.L().Infof("Path: %v", p)
+			}
+		}
 	}); e != nil {
 		log.L().Warnf("Failed to watch table %v", e)
 	}
@@ -155,10 +223,10 @@ func onConfigChange() {
 					NeighborAddress: peer.Addr().IP.String(),
 					PeerAsn:         peer.Asn(),
 				},
-
-				Transport: &bgpapi.Transport{
-					PassiveMode: true,
-				},
+				/*
+					Transport: &bgpapi.Transport{
+						PassiveMode: true,
+					},*/
 				RouteServer: &bgpapi.RouteServer{
 					RouteServerClient: false,
 					SecondaryRoute:    false,
@@ -174,14 +242,9 @@ func onConfigChange() {
 				},
 			},
 		}); e != nil {
-			log.L().Panic("Failed to add peer %v", e)
+			log.L().Panicf("Failed to add peer: %v", e)
 		}
 	}
-
-	_ = server.ListPolicyAssignment(context.Background(), &bgpapi.ListPolicyAssignmentRequest{},
-		func(pa *bgpapi.PolicyAssignment) {
-			log.L().Debug(pa)
-		})
 }
 
 func Init() {
@@ -190,8 +253,26 @@ func Init() {
 
 	onConfigChange()
 
-	go loop(chanRefresher)
+	go loop(cmdChannel)
 }
+func Add(ip net.IP, length uint32) {
+	cmdChannel <- &bgpOp{
+		op: opAdd,
+		prefix: &bgpapi.IPAddressPrefix{
+			PrefixLen: length,
+			Prefix:    ip.String(),
+		},
+	}
+}
+func Remove(ip net.IP) {
+	cmdChannel <- &bgpOp{
+		op: opRemove,
+		prefix: &bgpapi.IPAddressPrefix{
+			Prefix: ip.String(),
+		},
+	}
+}
+
 func knownNlri(prefixes []string) (bool, error) {
 	// Assume all prefixes are /32
 	prfxs := make([]*bgpapi.IPAddressPrefix, len(prefixes))
@@ -205,6 +286,7 @@ func knownNlri(prefixes []string) (bool, error) {
 	p, e := find(prfxs)
 	return p != nil, e
 }
+
 func onDnsResolved(fqdn string, previps, ips []string) {
 	_ = fqdn
 	var gone = utils.Difference(previps, ips)
@@ -233,29 +315,13 @@ func onDnsResolved(fqdn string, previps, ips []string) {
 	}
 
 }
-func loop(ch chan *bgpOp) {
-	for op := range ch {
-		switch op.op {
-		case opAdd:
-			if e := add(op.prefix); e != nil {
-				log.L().Errorf("Failed to add prefix: %v", e)
-			}
-		case opRemove:
-			if e := remove(op.prefix); e != nil {
-				log.L().Errorf("Failed to remove prefix: %v", e)
-			}
-		case opQuit:
-			return
-		}
-	}
-}
 
 func Deinit() {
 	log.L().Infof("Rt->Deinit()")
-	chanRefresher <- &bgpOp{
+	cmdChannel <- &bgpOp{
 		op: opQuit,
 	}
-	close(chanRefresher)
+	close(cmdChannel)
 
 	server.Stop()
 }

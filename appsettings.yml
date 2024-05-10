@@ -3,6 +3,7 @@ Logging:
 Routing:
   Kernel:
     Inject:
+        Metric: 10
         Communities:
           - 65530:111
   Bgp:
@@ -14,6 +15,10 @@ Routing:
     Communities:
       - 65530:888
     Peers:
+      - Asn: 65530
+        Addr:
+          Ip: 192.168.151.42
+          Port: 179
       - Asn: 65530
         Addr:
          Ip: 192.168.151.41

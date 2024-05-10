@@ -101,12 +101,19 @@ func (act *appCfgTimeoutsT) DefaultTTL() uint32 {
 
 type kernRoutingInject struct {
 	Communts []string `json:"Communities,required"`
+	Mtrc     uint16   `json:"Metric,omitempty"`
 }
 
 func (k *kernRoutingInject) Communities() []string {
 	m.RLock()
 	defer m.RUnlock()
 	return k.Communts
+}
+
+func (k *kernRoutingInject) Metric() uint16 {
+	m.RLock()
+	defer m.RUnlock()
+	return k.Mtrc
 }
 
 type kernRoutingT struct {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/fsnotify/fsnotify"
 	"github.com/mitchellh/mapstructure"
-	"github.com/red55/bgp-dns-peer/internal/log"
+	"github.com/red55/bgp-dns/internal/log"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"net"

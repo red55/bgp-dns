@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="RemoteTargetsManager">
+    <targets>
+      <target name="root@192.168.151.59:22" type="ssh/sftp" uuid="8efb923e-7de8-4e59-9828-f0330b378c0d">
+        <config>
+          <option name="projectRootOnTarget" value="/root/bgp-dns" />
+          <option name="serverName" value="root@192.168.151.59:22 agent" />
+        </config>
+        <ContributedStateBase type="GoLanguageRuntime">
+          <config />
+        </ContributedStateBase>
+      </target>
+    </targets>
+  </component>
+</project>

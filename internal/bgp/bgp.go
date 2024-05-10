@@ -5,52 +5,14 @@ import (
 	"errors"
 	"fmt"
 	bgpapi "github.com/osrg/gobgp/v3/api"
-	"github.com/red55/bgp-dns-peer/internal/cfg"
-	"github.com/red55/bgp-dns-peer/internal/log"
+	"github.com/red55/bgp-dns/internal/cfg"
+	"github.com/red55/bgp-dns/internal/log"
 	apb "google.golang.org/protobuf/types/known/anypb"
-	"net"
 	"net/netip"
 	"slices"
 )
 
-type operation int
-
-const (
-	opAdd operation = iota
-	opRemove
-	opQuit
-)
-
-var v4Family = &bgpapi.Family{
-	Afi:  bgpapi.Family_AFI_IP,
-	Safi: bgpapi.Family_SAFI_UNICAST,
-}
-
-type bgpOp struct {
-	op     operation
-	prefix *bgpapi.IPAddressPrefix
-}
-
-var chanRefresher chan *bgpOp
-
-func Add(ip net.IP, length uint32) {
-	chanRefresher <- &bgpOp{
-		op: opAdd,
-		prefix: &bgpapi.IPAddressPrefix{
-			PrefixLen: length,
-			Prefix:    ip.String(),
-		},
-	}
-}
-func Remove(ip net.IP) {
-	chanRefresher <- &bgpOp{
-		op: opRemove,
-		prefix: &bgpapi.IPAddressPrefix{
-			Prefix: ip.String(),
-		},
-	}
-}
-func newPath(prefix *bgpapi.IPAddressPrefix) *bgpapi.Path {
+func newBgpPath(prefix *bgpapi.IPAddressPrefix) *bgpapi.Path {
 	nlri, _ := apb.New(prefix)
 
 	a1, _ := apb.New(&bgpapi.OriginAttribute{
@@ -74,6 +36,7 @@ func newPath(prefix *bgpapi.IPAddressPrefix) *bgpapi.Path {
 		Pattrs: attrs,
 	}
 }
+
 func add(prefix *bgpapi.IPAddressPrefix) error {
 	if prefix == nil {
 		return fmt.Errorf("prefix is nil")
@@ -81,7 +44,7 @@ func add(prefix *bgpapi.IPAddressPrefix) error {
 
 	log.L().Infof("Adding prefix: %s", prefix.String())
 	if _, e := server.AddPath(context.Background(), &bgpapi.AddPathRequest{
-		Path: newPath(prefix),
+		Path: newBgpPath(prefix),
 	}); e != nil {
 		return fmt.Errorf("unable to add path: %v, %w", prefix, e)
 	}
@@ -136,7 +99,7 @@ func remove(prefix *bgpapi.IPAddressPrefix) error {
 	found, _ := find([]*bgpapi.IPAddressPrefix{prefix})
 	if found != nil {
 		e := server.DeletePath(context.Background(), &bgpapi.DeletePathRequest{
-			Path: newPath(prefix),
+			Path: newBgpPath(prefix),
 		})
 		return e
 	}

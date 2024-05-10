@@ -2,7 +2,7 @@ package dns
 
 import (
 	"fmt"
-	"github.com/red55/bgp-dns-peer/internal/log"
+	"github.com/red55/bgp-dns/internal/log"
 	"slices"
 	"sync"
 )
@@ -12,8 +12,6 @@ type Cache struct {
 	entries     []*Entry
 	nextRefresh *Entry
 }
-
-var chanRefresher chan *msg
 
 func (c *Cache) String() string {
 	c.m.RLock()
@@ -26,7 +24,7 @@ func (c *Cache) String() string {
 	return ret
 }
 
-var cache *Cache
+var cache = &Cache{}
 
 func (c *Cache) updateNextRefresh(lock bool) {
 	found := c.findLeastTTLCacheEntry(lock)

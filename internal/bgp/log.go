@@ -3,7 +3,7 @@ package bgp
 import (
 	zaphook "github.com/Sytten/logrus-zap-hook"
 	"github.com/osrg/gobgp/v3/pkg/log"
-	mylog "github.com/red55/bgp-dns-peer/internal/log"
+	mylog "github.com/red55/bgp-dns/internal/log"
 	"github.com/sirupsen/logrus"
 	"io"
 )

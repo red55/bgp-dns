@@ -3,7 +3,7 @@ package dns
 import (
 	"fmt"
 	"github.com/miekg/dns"
-	"github.com/red55/bgp-dns-peer/internal/cfg"
+	"github.com/red55/bgp-dns/internal/cfg"
 	"time"
 )
 

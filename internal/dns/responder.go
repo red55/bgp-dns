@@ -2,8 +2,8 @@ package dns
 
 import (
 	"github.com/miekg/dns"
-	"github.com/red55/bgp-dns-peer/internal/cfg"
-	"github.com/red55/bgp-dns-peer/internal/log"
+	"github.com/red55/bgp-dns/internal/cfg"
+	"github.com/red55/bgp-dns/internal/log"
 )
 
 func proxyQuery(w dns.ResponseWriter, rq *dns.Msg) {

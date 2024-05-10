@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/miekg/dns"
-	"github.com/red55/bgp-dns-peer/internal/cfg"
-	"github.com/red55/bgp-dns-peer/internal/log"
+	"github.com/red55/bgp-dns/internal/cfg"
+	"github.com/red55/bgp-dns/internal/log"
 	"net"
 	"os"
 )
@@ -55,7 +55,7 @@ func (r *resolversT) queryDns(q *dns.Msg) (*dns.Msg, error) {
 				log.L().Errorf("All DNS Servers didn't answer")
 
 				if errors.Is(e, os.ErrDeadlineExceeded) {
-					return nil, errors.Join(fmt.Errorf("DNS operation for %v failed ", q.Question), e)
+					return nil, errors.Join(fmt.Errorf("DNS op for %v failed ", q.Question), e)
 				}
 
 				cause := e
@@ -67,7 +67,7 @@ func (r *resolversT) queryDns(q *dns.Msg) (*dns.Msg, error) {
 
 				switch {
 				case errors.As(cause, &opError):
-					log.L().Errorf("DNS operation %s failed with %s on destination %s", opError.Op, opError.Error(),
+					log.L().Errorf("DNS op %s failed with %s on destination %s", opError.Op, opError.Error(),
 						opError.Addr)
 					return nil, cause
 				default:

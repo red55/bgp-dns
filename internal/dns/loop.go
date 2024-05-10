@@ -1,24 +1,26 @@
 package dns
 
 import (
-	"github.com/red55/bgp-dns-peer/internal/cfg"
-	"github.com/red55/bgp-dns-peer/internal/log"
+	"github.com/red55/bgp-dns/internal/cfg"
+	"github.com/red55/bgp-dns/internal/log"
 	"time"
 )
 
-type operation int
+type op int
 
 const (
-	opAdd operation = iota
+	opAdd op = iota
 	opRemove
 	opClear
 	opQuit
 )
 
-type msg struct {
-	op   operation
+type dnsOp struct {
+	op   op
 	fqdn string
 }
+
+var cmdChannel = make(chan *dnsOp)
 
 func calcTTL(de *Entry) uint32 {
 	var ttl = cfg.AppCfg.Timeouts().DefaultTTL()
@@ -41,7 +43,7 @@ func calcTTL(de *Entry) uint32 {
 	return ttl
 }
 
-func refresher(c chan *msg) {
+func loop(c chan *dnsOp) {
 	var ttl = uint32(1) // Until cfg is read on startup sleep only 1 sec
 
 	for {
@@ -65,7 +67,6 @@ func refresher(c chan *msg) {
 				return
 			}
 		case <-time.After(time.Duration(ttl) * time.Second):
-
 			if e := resolve(cache.getNextRefresh()); e != nil {
 				log.L().Errorf("Refresh failed: %v.", e)
 			}

@@ -4,7 +4,7 @@ import (
 	"container/ring"
 	"fmt"
 	"github.com/miekg/dns"
-	"github.com/red55/bgp-dns-peer/internal/cfg"
+	"github.com/red55/bgp-dns/internal/cfg"
 	"net"
 	"sync"
 )
@@ -24,12 +24,6 @@ type resolversT struct {
 }
 
 var _resolvers, _defaultResolvers resolversT
-
-func init() {
-	cache = &Cache{}
-
-	chanRefresher = make(chan *msg)
-}
 
 func (r *resolversT) setResolvers(resolvers []*net.UDPAddr) {
 	r.m.Lock()
@@ -64,7 +58,7 @@ func Init() {
 		}
 	}()
 
-	go refresher(chanRefresher)
+	go loop(cmdChannel)
 
 	resolveOnConfigChange()
 	responderOnConfigChange()
@@ -72,21 +66,21 @@ func Init() {
 
 func Deinit() {
 
-	chanRefresher <- &msg{
+	cmdChannel <- &dnsOp{
 		op: opQuit,
 	}
-	close(chanRefresher)
+	close(cmdChannel)
 }
 
 func CacheEnqueue(fqdn string) {
-	chanRefresher <- &msg{
+	cmdChannel <- &dnsOp{
 		op:   opAdd,
 		fqdn: fqdn,
 	}
 }
 
 func CacheClear() {
-	chanRefresher <- &msg{
+	cmdChannel <- &dnsOp{
 		op: opClear,
 	}
 }

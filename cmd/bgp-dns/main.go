@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/red55/bgp-dns-peer/internal/bgp"
-	"github.com/red55/bgp-dns-peer/internal/cfg"
-	"github.com/red55/bgp-dns-peer/internal/dns"
-	"github.com/red55/bgp-dns-peer/internal/log"
+	"github.com/red55/bgp-dns/internal/bgp"
+	"github.com/red55/bgp-dns/internal/cfg"
+	"github.com/red55/bgp-dns/internal/dns"
+	"github.com/red55/bgp-dns/internal/krt"
+	"github.com/red55/bgp-dns/internal/log"
 	"github.com/spf13/pflag"
 	"os"
 	"os/signal"
@@ -34,13 +35,15 @@ func main() {
 		panic(e)
 	}
 	defer log.Deinit()
-	// Reload Logging configuration
 
-	dns.Init()
-	defer dns.Deinit()
+	krt.Init()
+	defer krt.Deinit()
 
 	bgp.Init()
 	defer bgp.Deinit()
+
+	dns.Init()
+	defer dns.Deinit()
 
 	log.L().Info("Waiting for termination signal")
 	sig := make(chan os.Signal)
