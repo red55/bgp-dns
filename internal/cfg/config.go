@@ -26,8 +26,8 @@ func (p *bgpPolicyT) Communities() []string {
 type bgpNeighborT struct {
 	ASN         uint32       `json:"Asn"`
 	Adr         *net.TCPAddr `json:"Addr"`
-	MltHop      bool         `json:Multihop,omitempty`
-	Passivemode bool         `json:Passive,omitempty`
+	MltHop      bool         `json:"Multihop,omitempty"`
+	Passivemode bool         `json:"Passive,omitempty"`
 	ExprtPolicy *bgpPolicyT  `json:"ExportPolicy,omitempty"`
 	ImprtPolicy *bgpPolicyT  `json:"ImportPolicy,omitempty"`
 }
@@ -107,7 +107,12 @@ func (b *bgpT) Communities() []string {
 }
 
 type appCfgTimeoutsT struct {
-	DfltTtl uint32 `json:"DefaultTTL"`
+	DfltTtl    uint32 `json:"DefaultTTL"`
+	TtlforZero uint32 `json:"TtlForZero"`
+}
+
+func (act *appCfgTimeoutsT) TtlForZero() uint32 {
+	return act.TtlforZero
 }
 
 func (act *appCfgTimeoutsT) DefaultTTL() uint32 {
