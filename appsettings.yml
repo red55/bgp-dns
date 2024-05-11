@@ -42,8 +42,9 @@ Responder:
   Port: 8053
 Timeouts:
   DefaultTTL: 60
+  TtlForZero: 30
 Names:
-  - intel.com
+  - shizuku.rikka.app
   #- yt3.ggpht.com
   #- www.digitalocean.com
   #- digitalocean.com

@@ -108,8 +108,10 @@ func Resolve(de *Entry) error {
 				if a, ok := rr.(*dns.A); ok {
 					ttl := a.Hdr.Ttl
 
-					if ttl == 0 {
-						de.SetTtl(cfg.AppCfg.Timeouts().DefaultTTL())
+					if ttl < cfg.AppCfg.Timeouts().TtlForZero() {
+						log.L().Debugf("Entry %s has ttl less than %s, so adjust it to default", de.Fqdn(),
+							cfg.AppCfg.Timeouts().TtlForZero())
+						de.SetTtl(cfg.AppCfg.Timeouts().TtlForZero())
 					} else {
 						de.SetTtl(ttl)
 					}
