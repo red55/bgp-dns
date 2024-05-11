@@ -21,3 +21,6 @@
 go.work
 
 dist/
+./bgp-dnsd
+bgp-dnsd
+!cmd/*

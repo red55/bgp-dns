@@ -17,7 +17,7 @@ before:
     - go generate ./...
 
 builds:
-  - main: ./cmd/bgp-dns
+  - main: ./cmd/bgp-dnsd
     env:
       - CGO_ENABLED=0
     goos:
