@@ -2,6 +2,10 @@ package bgp
 
 import (
 	"context"
+	"net"
+	"slices"
+	"strconv"
+
 	bgpapi "github.com/osrg/gobgp/v3/api"
 	bgpsrv "github.com/osrg/gobgp/v3/pkg/server"
 	"github.com/red55/bgp-dns/internal/cfg"
@@ -10,9 +14,6 @@ import (
 	"github.com/red55/bgp-dns/internal/log"
 	"github.com/red55/bgp-dns/internal/utils"
 	"google.golang.org/protobuf/types/known/anypb"
-	"net"
-	"slices"
-	"strconv"
 )
 
 var (
@@ -99,16 +100,8 @@ func onConfigChange() {
 		},
 	}); e != nil {
 		log.L().Warnf("Failed to set global policy assignment: %v", e)
-	} /*
-		table := &bgpapi.WatchEventRequest_Table{
-			Filters: []*bgpapi.WatchEventRequest_Table_Filter{
-				{
-					Type: bgpapi.WatchEventRequest_Table_Filter_ADJIN,
-					Init: true,
-				},
-			},
-		}
-	*/
+	}
+
 	if e := server.WatchEvent(context.Background(), &bgpapi.WatchEventRequest{
 		//Peer: &bgpapi.WatchEventRequest_Peer{},
 		Table: &bgpapi.WatchEventRequest_Table{
@@ -223,10 +216,13 @@ func onConfigChange() {
 					NeighborAddress: peer.Addr().IP.String(),
 					PeerAsn:         peer.Asn(),
 				},
-				/*
-					Transport: &bgpapi.Transport{
-						PassiveMode: true,
-					},*/
+				EbgpMultihop: &bgpapi.EbgpMultihop{
+					Enabled:     peer.Multihop(),
+					MultihopTtl: 254,
+				},
+				Transport: &bgpapi.Transport{
+					PassiveMode: peer.PassiveMode(),
+				},
 				RouteServer: &bgpapi.RouteServer{
 					RouteServerClient: false,
 					SecondaryRoute:    false,

@@ -1,8 +1,9 @@
 package cfg
 
 import (
-	"go.uber.org/zap"
 	"net"
+
+	"go.uber.org/zap"
 )
 
 type bgpPolicyT struct {
@@ -25,6 +26,8 @@ func (p *bgpPolicyT) Communities() []string {
 type bgpNeighborT struct {
 	ASN         uint32       `json:"Asn"`
 	Adr         *net.TCPAddr `json:"Addr"`
+	MltHop      bool         `json:Multihop,omitempty`
+	Passivemode bool         `json:Passive,omitempty`
 	ExprtPolicy *bgpPolicyT  `json:"ExportPolicy,omitempty"`
 	ImprtPolicy *bgpPolicyT  `json:"ImportPolicy,omitempty"`
 }
@@ -39,6 +42,18 @@ func (n *bgpNeighborT) Addr() *net.TCPAddr {
 	m.RLock()
 	defer m.RUnlock()
 	return n.Adr
+}
+
+func (n *bgpNeighborT) Multihop() bool {
+	m.RLock()
+	defer m.RUnlock()
+	return n.MltHop
+}
+
+func (n *bgpNeighborT) PassiveMode() bool {
+	m.RLock()
+	defer m.RUnlock()
+	return n.Passivemode
 }
 
 func (n *bgpNeighborT) ExportPolicy() *bgpPolicyT {
