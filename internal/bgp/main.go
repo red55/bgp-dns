@@ -220,8 +220,14 @@ func onConfigChange() {
 					Enabled:     peer.Multihop(),
 					MultihopTtl: 254,
 				},
+				Timers: &bgpapi.Timers{
+					Config: &bgpapi.TimersConfig{
+						HoldTime: 240,
+					},
+				},
 				Transport: &bgpapi.Transport{
-					PassiveMode: peer.PassiveMode(),
+					PassiveMode:  peer.PassiveMode(),
+					MtuDiscovery: true,
 				},
 				RouteServer: &bgpapi.RouteServer{
 					RouteServerClient: false,
