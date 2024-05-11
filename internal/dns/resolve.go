@@ -109,8 +109,8 @@ func Resolve(de *Entry) error {
 					ttl := a.Hdr.Ttl
 
 					if ttl < cfg.AppCfg.Timeouts().TtlForZero() {
-						log.L().Debugf("Entry %s has ttl less than %s, so adjust it to default", de.Fqdn(),
-							cfg.AppCfg.Timeouts().TtlForZero())
+						log.L().Debugf("Entry %s has ttl less than %d, so adjust it to default %d", de.Fqdn(),
+							cfg.AppCfg.Timeouts().TtlForZero(), cfg.AppCfg.Timeouts().TtlForZero())
 						de.SetTtl(cfg.AppCfg.Timeouts().TtlForZero())
 					} else {
 						de.SetTtl(ttl)
