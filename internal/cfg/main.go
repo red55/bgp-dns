@@ -2,14 +2,15 @@ package cfg
 
 import (
 	"fmt"
+	"net"
+	"reflect"
+	"sync"
+
 	"github.com/fsnotify/fsnotify"
 	"github.com/mitchellh/mapstructure"
 	"github.com/red55/bgp-dns/internal/log"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
-	"net"
-	"reflect"
-	"sync"
 )
 
 var AppCfg *appCfgT
@@ -48,7 +49,7 @@ func Init(configFile string) {
 	viper.OnConfigChange(func(in fsnotify.Event) {
 		reloadConfig()
 	})
-	viper.WatchConfig()
+	// viper.WatchConfig()
 	reloadConfig()
 }
 
