@@ -48,3 +48,5 @@ changelog:
       - "^docs:"
       - "^test:"
       - "^chore:"
+release:
+  replace_existing_artifacts: true
