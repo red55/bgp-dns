@@ -2,9 +2,11 @@ package bgp
 
 import (
 	zaphook "github.com/Sytten/logrus-zap-hook"
+	bgpapi "github.com/osrg/gobgp/v3/api"
 	"github.com/osrg/gobgp/v3/pkg/log"
 	mylog "github.com/red55/bgp-dns/internal/log"
 	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 	"io"
 )
 
@@ -52,11 +54,33 @@ func (l *ZapLogrusOverride) SetLevel(level log.LogLevel) {
 }
 
 func (l *ZapLogrusOverride) GetLevel() log.LogLevel {
-	return log.LogLevel(6)
+	return log.LogLevel(l.logger.Level)
+}
+
+func zapLogLevelToBgp(l zap.AtomicLevel) bgpapi.SetLogLevelRequest_Level {
+	switch l.Level() {
+	case zap.DebugLevel:
+		return bgpapi.SetLogLevelRequest_DEBUG
+	case zap.InfoLevel:
+		return bgpapi.SetLogLevelRequest_INFO
+	case zap.WarnLevel:
+		return bgpapi.SetLogLevelRequest_WARN
+	case zap.ErrorLevel:
+		return bgpapi.SetLogLevelRequest_ERROR
+	case zap.DPanicLevel:
+		return bgpapi.SetLogLevelRequest_PANIC
+	case zap.PanicLevel:
+		return bgpapi.SetLogLevelRequest_PANIC
+	case zap.FatalLevel:
+		return bgpapi.SetLogLevelRequest_FATAL
+	default:
+		panic("unhandled default case")
+	}
 }
 
 /*
-switch cfg.AppCfg.Log().Level.Level() {
+func zapLogLevelToLogrus(l zapcore.Level) logrus.Level {
+	switch l {
 	case zapcore.DebugLevel:
 		return logrus.DebugLevel
 	case zapcore.InfoLevel:
@@ -74,4 +98,5 @@ switch cfg.AppCfg.Log().Level.Level() {
 	default:
 		panic("unhandled default case")
 	}
+}
 */

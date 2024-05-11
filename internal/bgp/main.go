@@ -20,15 +20,6 @@ var (
 	server *bgpsrv.BgpServer
 )
 
-func init() {
-	server = bgpsrv.NewBgpServer(bgpsrv.LoggerOption(NewZapLogrusOverride()))
-	_ = server.SetLogLevel(context.Background(), &bgpapi.SetLogLevelRequest{
-		Level: 0xFFFFFFF,
-	})
-
-	go server.Serve()
-}
-
 func onConfigChange() {
 	peers := make([]*bgpapi.Peer, 0, len(cfg.AppCfg.Routing().Bgp().Peers()))
 	if e := server.ListPeer(context.Background(), &bgpapi.ListPeerRequest{}, func(peer *bgpapi.Peer) {
@@ -250,6 +241,13 @@ func onConfigChange() {
 }
 
 func Init() {
+	server = bgpsrv.NewBgpServer(bgpsrv.LoggerOption(NewZapLogrusOverride()))
+	_ = server.SetLogLevel(context.Background(), &bgpapi.SetLogLevelRequest{
+		Level: zapLogLevelToBgp(cfg.AppCfg.Log().Level),
+	})
+
+	go server.Serve()
+
 	_ = cfg.RegisterConfigChangeHandler(onConfigChange)
 	_ = dns.RegisterDnsCallback(onDnsResolved)
 

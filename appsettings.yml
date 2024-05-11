@@ -1,5 +1,5 @@
 Logging:
-  Level: Debug
+  Level: Info
 Routing:
   Kernel:
     Inject:
