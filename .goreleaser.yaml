@@ -18,6 +18,7 @@ before:
 
 builds:
   - main: ./cmd/bgp-dnsd
+    binary: bgp-dnsd
     env:
       - CGO_ENABLED=0
     goos:
