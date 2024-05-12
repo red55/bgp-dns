@@ -6,22 +6,25 @@ import (
 	"fmt"
 	bgpapi "github.com/osrg/gobgp/v3/api"
 	"github.com/red55/bgp-dns/internal/cfg"
+	"github.com/red55/bgp-dns/internal/krt"
 	"github.com/red55/bgp-dns/internal/log"
-	apb "google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/anypb"
+	"net"
 	"net/netip"
 	"slices"
+	"strconv"
 )
 
 func newBgpPath(prefix *bgpapi.IPAddressPrefix) *bgpapi.Path {
-	nlri, _ := apb.New(prefix)
+	nlri, _ := anypb.New(prefix)
 
-	a1, _ := apb.New(&bgpapi.OriginAttribute{
+	a1, _ := anypb.New(&bgpapi.OriginAttribute{
 		Origin: 1, // IGP
 	})
-	a2, _ := apb.New(&bgpapi.NextHopAttribute{
+	a2, _ := anypb.New(&bgpapi.NextHopAttribute{
 		NextHop: cfg.AppCfg.Routing().Bgp().Id(),
 	})
-	a3, _ := apb.New(&bgpapi.AsPathAttribute{
+	a3, _ := anypb.New(&bgpapi.AsPathAttribute{
 		Segments: []*bgpapi.AsSegment{
 			{
 				Type:    2,
@@ -29,7 +32,7 @@ func newBgpPath(prefix *bgpapi.IPAddressPrefix) *bgpapi.Path {
 			},
 		},
 	})
-	attrs := []*apb.Any{a1, a2, a3}
+	attrs := []*anypb.Any{a1, a2, a3}
 	return &bgpapi.Path{
 		Family: v4Family,
 		Nlri:   nlri,
@@ -104,4 +107,78 @@ func remove(prefix *bgpapi.IPAddressPrefix) error {
 		return e
 	}
 	return fmt.Errorf("prefix %s is not found", prefix.String())
+}
+
+func onBgpEvent(event *bgpapi.WatchEventResponse) {
+	if p := event.GetPeer(); p != nil && p.Type == bgpapi.WatchEventResponse_PeerEvent_STATE {
+		log.L().Infof("PeerEvent_STATE: %v", p)
+	} else if t := event.GetTable(); t != nil {
+		onBgpPathCalc(t)
+	}
+}
+
+func onBgpPathCalc(event *bgpapi.WatchEventResponse_TableEvent) {
+	for _, p := range event.Paths {
+		var cs = new(bgpapi.CommunitiesAttribute)
+		var idx = slices.IndexFunc(p.Pattrs, func(a *anypb.Any) bool {
+			return a.TypeUrl == "type.googleapis.com/apipb.CommunitiesAttribute"
+		})
+
+		if idx == -1 {
+			log.L().Debugf("Skiping path %v as it doesn't have community attr", p)
+			continue
+		}
+
+		if e := p.Pattrs[idx].UnmarshalTo(cs); e != nil {
+			log.L().Panicf("Failed to unmarshall communities: %v", e)
+		}
+
+		comms := cfg.AppCfg.Routing().Kernel().Inject().Communities()
+		communitiesMatched := false
+		for _, c := range comms {
+			comm, _ := strconv.Atoi(c)
+			if slices.Index(cs.Communities, uint32(comm)) == -1 {
+				communitiesMatched = true
+				break
+			}
+		}
+
+		if !communitiesMatched {
+			log.L().Debugf("Skiping path %v as it's not marked with communities %v", p, comms)
+			continue
+		}
+
+		var prefix = new(bgpapi.IPAddressPrefix)
+		if e := p.Nlri.UnmarshalTo(prefix); e != nil {
+			log.L().Panicf("Failed to unmarshal prefix: %v", e)
+		}
+
+		idx = slices.IndexFunc(p.Pattrs, func(a *anypb.Any) bool {
+			return a.TypeUrl == "type.googleapis.com/apipb.NextHopAttribute"
+		})
+
+		if idx == -1 {
+			log.L().Warnf("Next hop attribute not found for prefix %v", prefix)
+			return
+		}
+
+		var nha = new(bgpapi.NextHopAttribute)
+		if e := p.Pattrs[idx].UnmarshalTo(nha); e != nil {
+			log.L().Panicf("Failed to unmarshal NextHopAttribute: %v", e)
+		}
+		var n = &net.IPNet{
+			IP:   net.ParseIP(prefix.Prefix),
+			Mask: net.CIDRMask(int(prefix.PrefixLen), int(prefix.PrefixLen)),
+		}
+
+		var m = cfg.AppCfg.Routing().Kernel().Inject().Metric()
+		var nh = net.ParseIP(nha.NextHop)
+		if p.IsWithdraw {
+			krt.Withdraw(n, nh, m)
+		} else /*if p.Best*/ {
+			krt.Advance(n, nh, m)
+		}
+
+		log.L().Infof("Path: %v", p)
+	}
 }
