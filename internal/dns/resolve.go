@@ -82,7 +82,7 @@ func (r *resolversT) queryDns(q *dns.Msg) (*dns.Msg, error) {
 	}
 }
 
-func Resolve(de *Entry) error {
+func Resolve(de /*in, out*/ *Entry) error {
 	if de == nil {
 		return errors.New("nil entry")
 	}
@@ -101,7 +101,7 @@ func Resolve(de *Entry) error {
 	if r, e := _resolvers.queryDns(q); e != nil {
 		return e
 	} else {
-		if r.Rcode == dns.RcodeSuccess {
+		if r.Rcode == dns.RcodeSuccess && r.Answer != nil {
 			de.r = r
 			de.ips = make([]string, 0, len(r.Answer))
 			for _, rr := range r.Answer {
@@ -121,7 +121,11 @@ func Resolve(de *Entry) error {
 			}
 			log.L().Debugf("Resolved: %v", de)
 		} else {
-			return fmt.Errorf("DNS server answered bad RCode %d, %w", r.Rcode, &errNXName{})
+			if r.Rcode != dns.RcodeSuccess {
+				return fmt.Errorf("DNS server answered bad RCode %d, %w ", r.Rcode, &errNXName{})
+			}
+			log.L().Debugf("DNS query didn't return any RRs so set default timeout to retry later")
+			de.SetTtl(cfg.AppCfg.Timeouts().DefaultTTL())
 		}
 
 	}
