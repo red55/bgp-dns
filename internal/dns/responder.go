@@ -27,7 +27,7 @@ func respond(w dns.ResponseWriter, rq *dns.Msg) {
 		switch q.Qtype {
 		case dns.TypeA:
 			var de *Entry
-			if de, e = cache.add(q.Name); e != nil {
+			if de, e = _Cache.add(q.Name); e != nil {
 				log.L().Errorf("Error resolving %s - %s", q.Name, e.Error())
 			} else {
 				var r = new(dns.Msg)

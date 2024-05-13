@@ -9,11 +9,13 @@ import (
 	"github.com/red55/bgp-dns/internal/log"
 	"github.com/red55/bgp-dns/internal/utils"
 	"net"
+	"sync"
 )
 
 var (
 	server *bgpsrv.BgpServer
 )
+var wg sync.WaitGroup
 
 func onConfigChange() {
 	peers := make([]*bgpapi.Peer, 0, len(cfg.AppCfg.Routing().Bgp().Peers()))
@@ -157,7 +159,7 @@ func onConfigChange() {
 				AfiSafis: []*bgpapi.AfiSafi{
 					{
 						Config: &bgpapi.AfiSafiConfig{
-							Family:  v4Family,
+							Family:  _v4Family,
 							Enabled: true,
 						},
 					},
@@ -182,10 +184,11 @@ func Init() {
 
 	onConfigChange()
 
-	go loop(cmdChannel)
+	go loop(_cmdChannel)
+
 }
 func Add(ip net.IP, length uint32) {
-	cmdChannel <- &bgpOp{
+	_cmdChannel <- &bgpOp{
 		op: opAdd,
 		prefix: &bgpapi.IPAddressPrefix{
 			PrefixLen: length,
@@ -194,7 +197,7 @@ func Add(ip net.IP, length uint32) {
 	}
 }
 func Remove(ip net.IP) {
-	cmdChannel <- &bgpOp{
+	_cmdChannel <- &bgpOp{
 		op: opRemove,
 		prefix: &bgpapi.IPAddressPrefix{
 			Prefix: ip.String(),
@@ -203,7 +206,7 @@ func Remove(ip net.IP) {
 }
 
 func knownNlri(prefixes []string) (bool, error) {
-	// Assume all prefixes are /32
+	// TODO: Assume all prefixes are /32
 	prfxs := make([]*bgpapi.IPAddressPrefix, len(prefixes))
 	for i, prefix := range prefixes {
 		prfxs[i] = &bgpapi.IPAddressPrefix{
@@ -216,10 +219,10 @@ func knownNlri(prefixes []string) (bool, error) {
 	return p != nil, e
 }
 
-func onDnsResolved(fqdn string, previps, ips []string) {
+func onDnsResolved(fqdn string, prevIps, ips []string) {
 	_ = fqdn
-	var gone = utils.Difference(previps, ips)
-	var arrived = utils.Difference(ips, previps)
+	var gone = utils.Difference(prevIps, ips)
+	var arrived = utils.Difference(ips, prevIps)
 
 	//No changes in IPs
 	if gone == nil && arrived == nil {
@@ -246,11 +249,14 @@ func onDnsResolved(fqdn string, previps, ips []string) {
 }
 
 func Deinit() {
-	log.L().Infof("Rt->Deinit()")
-	cmdChannel <- &bgpOp{
-		op: opQuit,
-	}
-	close(cmdChannel)
+	log.L().Infof("Bgp->Deinit(): Enter")
+	defer log.L().Infof("Bgp->Deinit(): Done")
 
 	server.Stop()
+
+	_cmdChannel <- &bgpOp{
+		op: opQuit,
+	}
+	wg.Wait()
+
 }

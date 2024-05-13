@@ -39,7 +39,7 @@ func (r *resolversT) queryDns(q *dns.Msg) (*dns.Msg, error) {
 
 	head := r.resolvers
 	for {
-		srv := r.resolvers.Value.(*resovlerT)
+		srv := r.resolvers.Value.(*resolverT)
 		log.L().Debugf("Using DNS server %v", srv)
 
 		if a, e := dns.Exchange(q, srv.addr.String()); e == nil {
@@ -142,7 +142,7 @@ func resolve(entry *Entry) error {
 	copy(previps, entry.ips)
 	e := Resolve(entry)
 
-	cache.updateNextRefresh(true)
+	_Cache.updateNextRefresh(true)
 
 	if e == nil {
 		fireCallbacks(entry.Fqdn(), previps, entry.ips)
@@ -150,9 +150,9 @@ func resolve(entry *Entry) error {
 	}
 
 	if errors.Is(e, &errNXName{}) {
-		log.L().Debugf("Remove from cache %s as it is NXDOMAIN",
+		log.L().Debugf("Remove from _Cache %s as it is NXDOMAIN",
 			entry.Fqdn())
-		e = cache.remove(entry.Fqdn())
+		e = _Cache.remove(entry.Fqdn())
 	}
 
 	return e

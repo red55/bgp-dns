@@ -5,10 +5,6 @@ import (
 	"slices"
 )
 
-type krtGw struct {
-	g      net.IP
-	weight uint32
-}
 type krtEntry struct {
 	n  *net.IPNet
 	gs []net.IP
@@ -20,15 +16,15 @@ type kernelRoutingTable struct {
 	//	m      sync.RWMutex
 }
 
-var routeTable kernelRoutingTable
+var _routeTable kernelRoutingTable
 
 func init() {
-	//	routeTable.m.Lock()
-	//	defer routeTable.m.Unlock()
-	routeTable.routes = make(map[string]*krtEntry, 100)
+	//	_routeTable.m.Lock()
+	//	defer _routeTable.m.Unlock()
+	_routeTable.routes = make(map[string]*krtEntry, 100)
 }
 
-func (k *kernelRoutingTable) rtFind(n *net.IPNet, g net.IP, m uint32) *krtEntry {
+func (k *kernelRoutingTable) rtFind(n *net.IPNet) *krtEntry {
 	key := n.String()
 	//k.m.RLock()
 	//defer k.m.RUnlock()
@@ -36,7 +32,7 @@ func (k *kernelRoutingTable) rtFind(n *net.IPNet, g net.IP, m uint32) *krtEntry 
 }
 
 func (k *kernelRoutingTable) rtAddOrUpdate(n *net.IPNet, g net.IP, m uint32) *krtEntry {
-	found := k.rtFind(n, g, m)
+	found := k.rtFind(n)
 	if found == nil {
 		//		k.m.Lock()
 		key := n.String()
@@ -58,9 +54,9 @@ func (k *kernelRoutingTable) rtAddOrUpdate(n *net.IPNet, g net.IP, m uint32) *kr
 	return found
 }
 
-func (k *kernelRoutingTable) rtRemove(n *net.IPNet, g net.IP, m uint32) {
+func (k *kernelRoutingTable) rtRemove(n *net.IPNet, g net.IP) {
 
-	found := k.rtFind(n, g, m)
+	found := k.rtFind(n)
 
 	if found != nil {
 		key := n.String()

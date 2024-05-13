@@ -13,7 +13,7 @@ const (
 	opQuit
 )
 
-var v4Family = &bgpapi.Family{
+var _v4Family = &bgpapi.Family{
 	Afi:  bgpapi.Family_AFI_IP,
 	Safi: bgpapi.Family_SAFI_UNICAST,
 }
@@ -23,9 +23,11 @@ type bgpOp struct {
 	prefix *bgpapi.IPAddressPrefix
 }
 
-var cmdChannel = make(chan *bgpOp)
+var _cmdChannel = make(chan *bgpOp)
 
 func loop(ch chan *bgpOp) {
+	wg.Add(1)
+	defer wg.Done()
 	for op := range ch {
 		switch op.op {
 		case opAdd:
