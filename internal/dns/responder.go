@@ -4,6 +4,7 @@ import (
 	"github.com/miekg/dns"
 	"github.com/red55/bgp-dns/internal/cfg"
 	"github.com/red55/bgp-dns/internal/log"
+	"strings"
 )
 
 func proxyQuery(w dns.ResponseWriter, rq *dns.Msg) {
@@ -48,7 +49,10 @@ func respond(w dns.ResponseWriter, rq *dns.Msg) {
 
 func responderOnConfigChange() {
 	for _, n := range cfg.AppCfg.Names() {
-		dns.HandleRemove(n)
-		dns.HandleFunc(n, respond)
+		d := strings.TrimSpace(n)
+		if len(d) > 0 {
+			dns.HandleRemove(n)
+			dns.HandleFunc(n, respond)
+		}
 	}
 }

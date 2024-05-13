@@ -8,6 +8,7 @@ import (
 	"github.com/red55/bgp-dns/internal/log"
 	"net"
 	"os"
+	"strings"
 )
 
 const dot = string('.')
@@ -25,7 +26,10 @@ func resolveOnConfigChange() {
 
 	CacheClear()
 	for _, n := range cfg.AppCfg.Names() {
-		CacheEnqueue(n)
+		d := strings.TrimSpace(n)
+		if len(d) > 0 {
+			CacheEnqueue(n)
+		}
 	}
 }
 
