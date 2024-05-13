@@ -34,6 +34,7 @@ func calcTTL(de *Entry) uint32 {
 			ttl = uint32(t)
 		} else {
 			log.L().Warnf("Looks like %v already expired. Missed time %f.", de, t)
+			de.SetTtl(ttl)
 		}
 
 		log.L().Infof("Refresher will sleep for %ds until %s for %s", ttl, de.Expire(),
