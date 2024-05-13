@@ -2,18 +2,13 @@ package bgp
 
 import (
 	"context"
-	"net"
-	"slices"
-	"strconv"
-
 	bgpapi "github.com/osrg/gobgp/v3/api"
 	bgpsrv "github.com/osrg/gobgp/v3/pkg/server"
 	"github.com/red55/bgp-dns/internal/cfg"
 	"github.com/red55/bgp-dns/internal/dns"
-	"github.com/red55/bgp-dns/internal/krt"
 	"github.com/red55/bgp-dns/internal/log"
 	"github.com/red55/bgp-dns/internal/utils"
-	"google.golang.org/protobuf/types/known/anypb"
+	"net"
 )
 
 var (
@@ -94,7 +89,6 @@ func onConfigChange() {
 	}
 
 	if e := server.WatchEvent(context.Background(), &bgpapi.WatchEventRequest{
-		//Peer: &bgpapi.WatchEventRequest_Peer{},
 		Table: &bgpapi.WatchEventRequest_Table{
 			Filters: []*bgpapi.WatchEventRequest_Table_Filter{
 				{
@@ -103,76 +97,11 @@ func onConfigChange() {
 			},
 		},
 	}, func(r *bgpapi.WatchEventResponse) {
-		if p := r.GetPeer(); p != nil && p.Type == bgpapi.WatchEventResponse_PeerEvent_STATE {
-			log.L().Infof("PeerEvent_STATE: %v", p)
-		} else if t := r.GetTable(); t != nil {
-			for _, p := range t.Paths {
-				var cs = new(bgpapi.CommunitiesAttribute)
-				var idx = slices.IndexFunc(p.Pattrs, func(a *anypb.Any) bool {
-					return a.TypeUrl == "type.googleapis.com/apipb.CommunitiesAttribute"
-				})
-
-				if idx == -1 {
-					log.L().Debugf("Skiping path %v as it doesn't have community attr", p)
-					continue
-				}
-
-				if e := p.Pattrs[idx].UnmarshalTo(cs); e != nil {
-					log.L().Panicf("Failed to unmarshall communities: %v", e)
-				}
-
-				comms := cfg.AppCfg.Routing().Kernel().Inject().Communities()
-				communitiesMatched := false
-				for _, c := range comms {
-					comm, _ := strconv.Atoi(c)
-					if slices.Index(cs.Communities, uint32(comm)) == -1 {
-						communitiesMatched = true
-						break
-					}
-				}
-
-				if !communitiesMatched {
-					log.L().Debugf("Skiping path %v as it's not marked with communities %v", p, comms)
-					continue
-				}
-
-				var prefix = new(bgpapi.IPAddressPrefix)
-				if e := p.Nlri.UnmarshalTo(prefix); e != nil {
-					log.L().Panicf("Failed to unmarshal prefix: %v", e)
-				}
-
-				idx = slices.IndexFunc(p.Pattrs, func(a *anypb.Any) bool {
-					return a.TypeUrl == "type.googleapis.com/apipb.NextHopAttribute"
-				})
-
-				if idx == -1 {
-					log.L().Warnf("Next hop attribute not found for prefix %v", prefix)
-					return
-				}
-
-				var nha = new(bgpapi.NextHopAttribute)
-				if e := p.Pattrs[idx].UnmarshalTo(nha); e != nil {
-					log.L().Panicf("Failed to unmarshal NextHopAttribute: %v", e)
-				}
-				var n = &net.IPNet{
-					IP:   net.ParseIP(prefix.Prefix),
-					Mask: net.CIDRMask(int(prefix.PrefixLen), int(prefix.PrefixLen)),
-				}
-
-				var m = cfg.AppCfg.Routing().Kernel().Inject().Metric()
-				var nh = net.ParseIP(nha.NextHop)
-				if p.IsWithdraw {
-					krt.Withdraw(n, nh, m)
-				} else /*if p.Best*/ {
-					krt.Advance(n, nh, m)
-				}
-
-				log.L().Infof("Path: %v", p)
-			}
-		}
+		onBgpEvent(r)
 	}); e != nil {
 		log.L().Warnf("Failed to watch table %v", e)
 	}
+
 	for _, peer := range cfg.AppCfg.Routing().Bgp().Peers() {
 		var pol *bgpapi.ApplyPolicy
 

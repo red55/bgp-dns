@@ -11,7 +11,7 @@ func Init() {
 	go loop(cmdChannel)
 }
 
-func Advance(network *net.IPNet, gw net.IP, metric uint16) {
+func Advance(network *net.IPNet, gw net.IP, metric uint32) {
 	cmdChannel <- &routeOp{
 		op: opAdvance,
 		r: &route{
@@ -22,7 +22,7 @@ func Advance(network *net.IPNet, gw net.IP, metric uint16) {
 	}
 }
 
-func Withdraw(network *net.IPNet, gw net.IP, metric uint16) {
+func Withdraw(network *net.IPNet, gw net.IP, metric uint32) {
 	cmdChannel <- &routeOp{
 		op: opWithdraw,
 		r: &route{
