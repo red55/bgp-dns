@@ -24,11 +24,11 @@ func (c *Cache) String() string {
 	return ret
 }
 
-var cache = &Cache{}
+var _Cache = &Cache{}
 
 func (c *Cache) updateNextRefresh(lock bool) {
 	found := c.findLeastTTLCacheEntry(lock)
-	log.L().Debugf("Found least DefaultTTL cache entry: %v", found)
+	log.L().Debugf("Found least DefaultTTL _Cache entry: %v", found)
 	c.setNextRefresh(found)
 }
 

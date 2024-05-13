@@ -8,11 +8,9 @@ import (
 	"github.com/red55/bgp-dns/internal/cfg"
 	"github.com/red55/bgp-dns/internal/krt"
 	"github.com/red55/bgp-dns/internal/log"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"net"
 	"net/netip"
-	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -37,7 +35,7 @@ func newBgpPath(prefix *bgpapi.IPAddressPrefix) *bgpapi.Path {
 	})
 	attrs := []*anypb.Any{a1, a2, a3}
 	return &bgpapi.Path{
-		Family: v4Family,
+		Family: _v4Family,
 		Nlri:   nlri,
 		Pattrs: attrs,
 	}
@@ -76,7 +74,7 @@ func find(prefixes []*bgpapi.IPAddressPrefix) (found *bgpapi.IPAddressPrefix, e 
 
 	if e := server.ListPath(context.Background(), &bgpapi.ListPathRequest{
 		TableType: bgpapi.TableType_GLOBAL,
-		Family:    v4Family,
+		Family:    _v4Family,
 		Prefixes:  tl,
 	}, func(dst *bgpapi.Destination) {
 		p1, _ := netip.ParsePrefix(dst.Prefix)
@@ -120,33 +118,11 @@ func onBgpEvent(event *bgpapi.WatchEventResponse) {
 	}
 }
 
-func a2s[T proto.Message](a *anypb.Any, p T) error {
-	if e := anypb.UnmarshalTo(a, p, proto.UnmarshalOptions{}); e != nil {
-		log.L().Fatalf("anypb.UnmarshalTo failed")
-		return e
-	}
-	return nil
-}
-
-func extractAttr[T proto.Message](attrs []*anypb.Any, p T) error {
-	typeUrl := fmt.Sprintf("type.googleapis.com/%s", reflect.TypeOf(p).Elem().String())
-
-	var idx = slices.IndexFunc(attrs, func(a *anypb.Any) bool {
-		return a.TypeUrl == typeUrl
-	})
-
-	if idx > -1 {
-		return a2s(attrs[idx], p)
-	}
-
-	return fmt.Errorf("attribute %s not found", typeUrl)
-}
-
 func path2String(p *bgpapi.Path) string {
 
 	var s = make([]string, 0, 4)
 	var ap bgpapi.IPAddressPrefix
-	a2s(p.Nlri, &ap)
+	_ = a2s(p.Nlri, &ap)
 
 	s = append(s, fmt.Sprintf("Prefix: %s", ap.Prefix))
 

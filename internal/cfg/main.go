@@ -23,7 +23,7 @@ type ConfigChangeHandlerRegistry struct {
 	m        sync.RWMutex
 }
 
-var changeHandlers = ConfigChangeHandlerRegistry{
+var _changeHandlers = ConfigChangeHandlerRegistry{
 	onChange: make([]ConfigChangedHandler, 0, 3),
 	m:        sync.RWMutex{},
 }
@@ -57,10 +57,10 @@ func RegisterConfigChangeHandler(handler ConfigChangedHandler) error {
 	p := reflect.ValueOf(handler).Pointer()
 	var found bool = false
 
-	changeHandlers.m.Lock()
-	defer changeHandlers.m.Unlock()
+	_changeHandlers.m.Lock()
+	defer _changeHandlers.m.Unlock()
 
-	for _, v := range changeHandlers.onChange {
+	for _, v := range _changeHandlers.onChange {
 		if reflect.ValueOf(v).Pointer() == p {
 			found = true
 		}
@@ -70,7 +70,7 @@ func RegisterConfigChangeHandler(handler ConfigChangedHandler) error {
 		return fmt.Errorf("config change handler already registered")
 	}
 
-	changeHandlers.onChange = append(changeHandlers.onChange, handler)
+	_changeHandlers.onChange = append(_changeHandlers.onChange, handler)
 
 	return nil
 }
@@ -79,7 +79,7 @@ func Deinit() {
 	log.L().Debugf("cfg.Deinit called")
 	m.Lock()
 	defer m.Unlock()
-	changeHandlers.onChange = []ConfigChangedHandler{}
+	_changeHandlers.onChange = []ConfigChangedHandler{}
 }
 
 func readConfig() {
@@ -122,8 +122,8 @@ func fireOnChange() {
 	m.RLock()
 	defer m.RUnlock()
 
-	if len(changeHandlers.onChange) > 0 {
-		for _, handler := range changeHandlers.onChange {
+	if len(_changeHandlers.onChange) > 0 {
+		for _, handler := range _changeHandlers.onChange {
 			handler()
 		}
 	}

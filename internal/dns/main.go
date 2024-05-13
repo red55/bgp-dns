@@ -5,16 +5,17 @@ import (
 	"fmt"
 	"github.com/miekg/dns"
 	"github.com/red55/bgp-dns/internal/cfg"
+	"github.com/red55/bgp-dns/internal/log"
 	"net"
 	"sync"
 )
 
-type resovlerT struct {
+type resolverT struct {
 	addr *net.UDPAddr
 	ok   bool
 }
 
-func (r *resovlerT) String() string {
+func (r *resolverT) String() string {
 	return fmt.Sprintf("%s, ok=%t", r.addr.String(), r.ok)
 }
 
@@ -23,7 +24,10 @@ type resolversT struct {
 	resolvers *ring.Ring
 }
 
-var _resolvers, _defaultResolvers resolversT
+var (
+	_resolvers, _defaultResolvers resolversT
+	_wg                           sync.WaitGroup
+)
 
 func (r *resolversT) setResolvers(resolvers []*net.UDPAddr) {
 	r.m.Lock()
@@ -33,7 +37,7 @@ func (r *resolversT) setResolvers(resolvers []*net.UDPAddr) {
 	r.resolvers = ring.New(l)
 
 	for i := 0; i < l; i++ {
-		r.resolvers.Value = &resovlerT{
+		r.resolvers.Value = &resolverT{
 			resolvers[i],
 			true,
 		}
@@ -42,7 +46,7 @@ func (r *resolversT) setResolvers(resolvers []*net.UDPAddr) {
 }
 
 func Init() {
-	// Clear dns cache and resolve configured dns names
+	// Clear dns _Cache and resolve configured dns names
 	_ = cfg.RegisterConfigChangeHandler(resolveOnConfigChange)
 	_ = cfg.RegisterConfigChangeHandler(responderOnConfigChange)
 
@@ -58,29 +62,30 @@ func Init() {
 		}
 	}()
 
-	go loop(cmdChannel)
+	go loop(_cmdChannel)
 
 	resolveOnConfigChange()
 	responderOnConfigChange()
 }
 
 func Deinit() {
-
-	cmdChannel <- &dnsOp{
+	log.L().Infof("Dns->Deinit(): Enter")
+	defer log.L().Infof("Dns->Deinit(): Done")
+	_cmdChannel <- &dnsOp{
 		op: opQuit,
 	}
-	close(cmdChannel)
+	_wg.Wait()
 }
 
 func CacheEnqueue(fqdn string) {
-	cmdChannel <- &dnsOp{
+	_cmdChannel <- &dnsOp{
 		op:   opAdd,
 		fqdn: fqdn,
 	}
 }
 
 func CacheClear() {
-	cmdChannel <- &dnsOp{
+	_cmdChannel <- &dnsOp{
 		op: opClear,
 	}
 }

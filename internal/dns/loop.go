@@ -20,7 +20,7 @@ type dnsOp struct {
 	fqdn string
 }
 
-var cmdChannel = make(chan *dnsOp)
+var _cmdChannel = make(chan *dnsOp)
 
 func calcTTL(de *Entry) uint32 {
 	var ttl = cfg.AppCfg.Timeouts().DefaultTTL()
@@ -45,32 +45,33 @@ func calcTTL(de *Entry) uint32 {
 
 func loop(c chan *dnsOp) {
 	var ttl = uint32(1) // Until cfg is read on startup sleep only 1 sec
-
+	_wg.Add(1)
+	defer _wg.Done()
 	for {
 		select {
 		case op := <-c:
 			switch op.op {
 			case opAdd:
-				if _, e := cache.add(op.fqdn); e == nil {
-					log.L().Debugf("Added %s to the cache.", op.fqdn)
+				if _, e := _Cache.add(op.fqdn); e == nil {
+					log.L().Debugf("Added %s to the _Cache.", op.fqdn)
 				} else {
 					log.L().Debugf("Adding %s failed with %v", op.fqdn, e)
 				}
 
 			case opRemove:
-				if e := cache.remove(op.fqdn); e != nil {
+				if e := _Cache.remove(op.fqdn); e != nil {
 					log.L().Errorf("Remove failed: %v.", e)
 				}
 			case opClear:
-				cache.clear()
+				_Cache.clear()
 			case opQuit:
 				return
 			}
 		case <-time.After(time.Duration(ttl) * time.Second):
-			if e := resolve(cache.getNextRefresh()); e != nil {
+			if e := resolve(_Cache.getNextRefresh()); e != nil {
 				log.L().Errorf("Refresh failed: %v.", e)
 			}
-			ttl = calcTTL(cache.getNextRefresh())
+			ttl = calcTTL(_Cache.getNextRefresh())
 		}
 	}
 }
