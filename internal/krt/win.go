@@ -7,10 +7,10 @@ import (
 	"net"
 )
 
-func advance(net *net.IPNet, gw net.IP, metric uint16) {
-	log.L().Infof("[Win] Injecting kernel route %s, next hop: %s, metric: %d", net.String(), gw.String(), metric)
+func advance(net *net.IPNet, gw net.IP, metric uint32) {
+	log.L().Panicf("[Win, Not implemented] Injecting kernel route %s, next hop: %s, metric: %d", net.String(), gw.String(), metric)
 }
 
-func withdraw(net *net.IPNet, gw net.IP, metric uint16) {
-	log.L().Infof("[Win] Removing kernel route %s, next hop: %s, metric: %d", net.String(), gw.String(), metric)
+func withdraw(net *net.IPNet, gw net.IP, metric uint32, del bool) {
+	log.L().Panicf("[Win, Not implemented] Removing kernel route %s, next hop: %s, metric: %d", net.String(), gw.String(), metric)
 }

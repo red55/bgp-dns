@@ -3,83 +3,75 @@ package krt
 import (
 	"net"
 	"slices"
-	"sync"
 )
 
+type krtGw struct {
+	g      net.IP
+	weight uint32
+}
 type krtEntry struct {
-	n *net.IPNet
-	g net.IP
-	m uint16
+	n  *net.IPNet
+	gs []net.IP
+	m  uint32
 }
 
 type kernelRoutingTable struct {
-	routes []*krtEntry
-	m      sync.RWMutex
+	routes map[string]*krtEntry
+	//	m      sync.RWMutex
 }
 
 var routeTable kernelRoutingTable
 
 func init() {
-	routeTable.m.Lock()
-	defer routeTable.m.Unlock()
-	routeTable.routes = make([]*krtEntry, 0, 100)
+	//	routeTable.m.Lock()
+	//	defer routeTable.m.Unlock()
+	routeTable.routes = make(map[string]*krtEntry, 100)
 }
 
-func cmpIPNet(a, b *net.IPNet) bool {
-	if a == nil || b == nil {
-		return false
-	}
-	if !a.IP.Equal(b.IP) {
-		return false
-	}
-	if len(a.Mask) != len(b.Mask) {
-		return false
-	}
-	for i, v := range a.Mask {
-		if v != b.Mask[i] {
-			return false
+func (k *kernelRoutingTable) rtFind(n *net.IPNet, g net.IP, m uint32) *krtEntry {
+	key := n.String()
+	//k.m.RLock()
+	//defer k.m.RUnlock()
+	return k.routes[key]
+}
+
+func (k *kernelRoutingTable) rtAddOrUpdate(n *net.IPNet, g net.IP, m uint32) *krtEntry {
+	found := k.rtFind(n, g, m)
+	if found == nil {
+		//		k.m.Lock()
+		key := n.String()
+		found = &krtEntry{
+			n:  n,
+			gs: []net.IP{g},
+			m:  m,
+		}
+		k.routes[key] = found
+		//		k.m.Unlock()
+	} else {
+		idx := slices.IndexFunc(found.gs, func(ip net.IP) bool {
+			return ip.Equal(g)
+		})
+		if idx == -1 {
+			found.gs = append(found.gs, g)
 		}
 	}
-	return true
+	return found
 }
 
-func (e *krtEntry) Equal(o *krtEntry) bool {
-	return cmpIPNet(e.n, o.n) && e.m == o.m && e.g.Equal(o.g)
-}
-func (k *kernelRoutingTable) rtFind(n *net.IPNet, g net.IP, m uint16) (int, *krtEntry) {
-	ke := &krtEntry{n: n, g: g, m: m} // TODO: remove extra allocation. Don't care for now.
-	k.m.RLock()
-	defer k.m.RUnlock()
-	found := slices.IndexFunc(k.routes, func(a *krtEntry) bool {
-		return a.Equal(ke)
-	})
+func (k *kernelRoutingTable) rtRemove(n *net.IPNet, g net.IP, m uint32) {
 
-	if found == -1 {
-		return found, nil
-	}
-	return found, k.routes[found]
-}
-
-func (k *kernelRoutingTable) rtAdd(n *net.IPNet, g net.IP, m uint16) error {
-	_, found := k.rtFind(n, g, m)
-	if found == nil {
-		k.m.Lock()
-		k.routes = append(k.routes, &krtEntry{n, g, m})
-		k.m.Unlock()
-	}
-	return nil
-}
-
-func (k *kernelRoutingTable) rtRemove(n *net.IPNet, g net.IP, m uint16) error {
-
-	idx, found := k.rtFind(n, g, m)
+	found := k.rtFind(n, g, m)
 
 	if found != nil {
-		k.m.Lock()
-		l := len(k.routes) - 1
-		k.routes[idx] = k.routes[l]
-		k.routes = k.routes[:l]
-		k.m.Unlock()
+		key := n.String()
+		//		k.m.Lock()
+		found.gs = slices.DeleteFunc(found.gs, func(ip net.IP) bool {
+			return ip.Equal(g)
+		})
+
+		if len(found.gs) == 0 {
+			delete(k.routes, key)
+		}
+		//		k.m.Unlock()
 	}
-	return nil
 }
