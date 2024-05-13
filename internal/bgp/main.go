@@ -200,7 +200,8 @@ func Remove(ip net.IP) {
 	_cmdChannel <- &bgpOp{
 		op: opRemove,
 		prefix: &bgpapi.IPAddressPrefix{
-			Prefix: ip.String(),
+			Prefix:    ip.String(),
+			PrefixLen: 32,
 		},
 	}
 }
