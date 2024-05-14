@@ -26,6 +26,9 @@ func init() {
 func NewDefaultConfig() *zap.Config {
 	r := zap.NewDevelopmentConfig()
 	r.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	if len(os.Getenv("INVOCATION_ID")) > 0 {
+		r.EncoderConfig.TimeKey = zapcore.OmitKey
+	}
 
 	return &r
 }
