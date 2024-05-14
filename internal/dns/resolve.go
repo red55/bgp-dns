@@ -108,20 +108,22 @@ func Resolve(de /*in, out*/ *Entry) error {
 		if r.Rcode == dns.RcodeSuccess && r.Answer != nil {
 			de.r = r
 			de.ips = make([]string, 0, len(r.Answer))
+			ttl := uint32(0)
 			for _, rr := range r.Answer {
 				if a, ok := rr.(*dns.A); ok {
-					ttl := a.Hdr.Ttl
-
-					if ttl < cfg.AppCfg.Timeouts().TtlForZero() {
-						log.L().Debugf("Entry %s has ttl less than %d, so adjust it to default %d", de.Fqdn(),
-							cfg.AppCfg.Timeouts().TtlForZero(), cfg.AppCfg.Timeouts().TtlForZero())
-						de.SetTtl(cfg.AppCfg.Timeouts().TtlForZero())
-					} else {
-						de.SetTtl(ttl)
+					if ttl < a.Hdr.Ttl {
+						ttl = a.Hdr.Ttl
 					}
 
 					de.ips = append(de.ips, a.A.String())
 				}
+
+				if ttl < cfg.AppCfg.Timeouts().TtlForZero() {
+					log.L().Debugf("Entry %s has ttl less than %d, so adjust it to default %d", de.Fqdn(),
+						cfg.AppCfg.Timeouts().TtlForZero(), cfg.AppCfg.Timeouts().TtlForZero())
+					ttl = cfg.AppCfg.Timeouts().TtlForZero()
+				}
+				de.SetTtl(ttl)
 			}
 			log.L().Debugf("Resolved: %v", de)
 		} else {
