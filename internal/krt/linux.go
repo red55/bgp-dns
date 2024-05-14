@@ -89,7 +89,21 @@ func advance(network *net.IPNet, gw net.IP, metric uint32) {
 	}
 
 }
-func withdraw(network *net.IPNet, gw net.IP, metric uint32, del bool) {
+func withdraw(network *net.IPNet, gw net.IP, metric uint32) {
+	found := _routeTable.rtFind(network)
+	if found == nil {
+		log.L().Infof("Route %s, next hop %s, metric: %d was not injected. Ignoring..",
+			network.String(), gw.String(), metric)
+		return
+	}
+	found.gs = slices.DeleteFunc(found.gs, func(ip net.IP) bool {
+		return ip.Equal(gw)
+	})
+	_routeTable.rtRemove(found.n, gw)
+	rtnlWithdraw(found.n, gw, found.m)
+}
+
+func rtnlWithdraw(network *net.IPNet, gw net.IP, metric uint32) {
 	log.L().Infof("[Linux] Route %s, next hop %s, metric %d Removing...", network.String(), gw.String(), metric)
 	c, e := rtnetlink.Dial(nil)
 	if e != nil {

@@ -3,7 +3,6 @@ package krt
 import (
 	"github.com/red55/bgp-dns/internal/log"
 	"net"
-	"slices"
 )
 
 type op int
@@ -35,23 +34,12 @@ func loop(c chan *routeOp) {
 			advance(o.r.network, o.r.gateway, o.r.metric)
 			break
 		case opWithdraw:
-			found := _routeTable.rtFind(o.r.network)
-			if found == nil {
-				log.L().Infof("Route %s, next hop %s, metric: %d was not injected. Ignoring..",
-					o.r.network.String(), o.r.gateway.String(), o.r.metric)
-				continue
-			}
-			found.gs = slices.DeleteFunc(found.gs, func(ip net.IP) bool {
-				return ip.Equal(o.r.gateway)
-			})
-			_routeTable.rtRemove(found.n, o.r.gateway)
-			withdraw(found.n, o.r.gateway, found.m, len(found.gs) == 0)
+			withdraw(o.r.network, o.r.gateway, o.r.metric)
 		case opQuit:
 			//_routeTable.m.Lock()
 			for _, v := range _routeTable.routes {
-				l := len(v.gs) - 1
-				for i, g := range v.gs {
-					withdraw(v.n, g, v.m, i == l)
+				for _, g := range v.gs {
+					rtnlWithdraw(v.n, g, v.m)
 				}
 				clear(v.gs)
 			}
