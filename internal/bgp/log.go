@@ -10,6 +10,8 @@ import (
 	"io"
 )
 
+const _gobgpLogCallerSkip = 8
+
 type ZapLogrusOverride struct {
 	logger *logrus.Logger
 }
@@ -18,10 +20,16 @@ func NewZapLogrusOverride() *ZapLogrusOverride {
 	r := &ZapLogrusOverride{
 		logger: logrus.New(),
 	}
+
 	r.logger.ReportCaller = true
 	r.logger.SetOutput(io.Discard)
-	h, _ := zaphook.NewZapHook(mylog.L().Desugar())
+
+	l := mylog.L().Desugar()
+	logger := l.WithOptions(zap.AddCallerSkip(_gobgpLogCallerSkip))
+	h, _ := zaphook.NewZapHook(logger)
+
 	r.logger.AddHook(h)
+
 	return r
 }
 
