@@ -37,8 +37,8 @@ DefaultResolvers:
   - Ip: 77.88.8.8
     Port: 53
 Resolvers:
-  - Ip: 8.8.4.4
-    Port: 53
+#  - Ip: 8.8.4.4
+#    Port: 53
   - Ip: 1.1.1.1
     Port: 53
 Responder:
@@ -48,15 +48,20 @@ Timeouts:
   DefaultTTL: 60
   TtlForZero: 30
 Names:
-  # - mil
+  - 4pda.to
+  - brands.gm-cdn.com
+  - digitalocean.com
+  - currenttime.tv
+  - ibm.com
+  - intel.com
+  - jsfiddle.net
+  - netapp.com
+  - redhat.com
+  - rozetked.me
+  - ryan.himmelwright.net
   - shizuku.rikka.app
-  #- yt3.ggpht.com
-  #- www.digitalocean.com
-  #- digitalocean.com
-  #- www.cadillac.com
-  #- brands.gm-cdn.com
-  #- www.svoboda.org
-  #- cloud.ibm.com
-  #- ibm.com
-  #- www.ibm.com
-  #- dataplatform.cloud.ibm.com
+  - svoboda.org
+  - www.cadillac.com
+  - yt3.ggpht.com
+  - mil
+  -
