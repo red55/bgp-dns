@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"os"
 	"sync"
 )
 
@@ -18,8 +19,6 @@ type Config struct {
 }
 
 func init() {
-	_m.Lock()
-	defer _m.Unlock()
 	l, _ := zap.NewDevelopment()
 	_logger = l.Sugar()
 }
@@ -86,11 +85,11 @@ func Deinit() {
 	}
 	err := _logger.Sync()
 	if err != nil {
-		_logger.Debugf("Deinit and sync failed, ignoring..(%v)", err)
+		_, _ = fmt.Fprintf(os.Stderr, "Deinit and sync failed, ignoring..(%v)", err)
 	}
 }
 func L() *zap.SugaredLogger {
-	_m.RLock()
-	defer _m.RUnlock()
+	// _m.RLock()
+	// defer _m.RUnlock()
 	return _logger
 }
