@@ -117,15 +117,16 @@ func Resolve(de /*in, out*/ *Entry) error {
 
 					de.ips = append(de.ips, a.A.String())
 				}
-
-				if ttl < cfg.AppCfg.Timeouts().TtlForZero() {
-					log.L().Debugf("Entry %s has ttl less than %d, so adjust it to default %d", de.Fqdn(),
-						cfg.AppCfg.Timeouts().TtlForZero(), cfg.AppCfg.Timeouts().TtlForZero())
-					ttl = cfg.AppCfg.Timeouts().TtlForZero()
-				}
-				de.SetTtl(ttl)
 			}
+			if ttl < cfg.AppCfg.Timeouts().TtlForZero() {
+				log.L().Debugf("Entry %s has ttl %d, so adjust it to default %d", de.Fqdn(),
+					ttl, cfg.AppCfg.Timeouts().TtlForZero())
+				ttl = cfg.AppCfg.Timeouts().TtlForZero()
+			}
+			de.SetTtl(ttl)
+
 			log.L().Debugf("Resolved: %v", de)
+
 		} else {
 			if r.Rcode != dns.RcodeSuccess {
 				return fmt.Errorf("DNS server answered bad RCode %d, %w ", r.Rcode, &errNXName{})
