@@ -114,7 +114,7 @@ func onBgpEvent(event *bgpapi.WatchEventResponse) {
 	if p := event.GetPeer(); p != nil && p.Type == bgpapi.WatchEventResponse_PeerEvent_STATE {
 		log.L().Infof("PeerEvent_STATE: %v", p)
 	} else if t := event.GetTable(); t != nil {
-		onBgpPathCalc(t)
+		onBgpRoutingTableChange(t)
 	}
 }
 
@@ -149,7 +149,19 @@ func path2String(p *bgpapi.Path) string {
 	return strings.Join(s, ",")
 }
 
-func onBgpPathCalc(event *bgpapi.WatchEventResponse_TableEvent) {
+func parseCommunity(c string) uint32 {
+	parts := strings.Split(c, ":")
+	if len(parts) != 2 {
+		return 0
+	}
+
+	as, _ := strconv.Atoi(parts[0])
+	comm, _ := strconv.Atoi(parts[1])
+
+	return (uint32(as) << 16) | uint32(comm)
+}
+
+func onBgpRoutingTableChange(event *bgpapi.WatchEventResponse_TableEvent) {
 	for _, p := range event.Paths {
 		log.L().Infof("[BGP] Path: %s", path2String(p))
 
@@ -170,8 +182,8 @@ func onBgpPathCalc(event *bgpapi.WatchEventResponse_TableEvent) {
 		comms := cfg.AppCfg.Routing().Kernel().Inject().Communities()
 		communitiesMatched := false
 		for _, c := range comms {
-			comm, _ := strconv.Atoi(c)
-			if slices.Index(cs.Communities, uint32(comm)) == -1 {
+			comm := parseCommunity(c)
+			if comm != 0 && slices.Index(cs.Communities, uint32(comm)) != -1 {
 				communitiesMatched = true
 				break
 			}
