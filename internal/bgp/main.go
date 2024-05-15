@@ -166,7 +166,7 @@ func onConfigChange() {
 				},
 			},
 		}); e != nil {
-			log.L().Panicf("Failed to add peer: %v", e)
+			log.L().Fatalf("Failed to add peer: %v", e)
 		}
 	}
 }
