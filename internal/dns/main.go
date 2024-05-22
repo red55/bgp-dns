@@ -46,9 +46,7 @@ func (r *resolversT) setResolvers(resolvers []*net.UDPAddr) {
 }
 
 func Init() {
-	// Clear dns _Cache and resolve configured dns names
-	_ = cfg.RegisterConfigChangeHandler(resolveOnConfigChange)
-	_ = cfg.RegisterConfigChangeHandler(responderOnConfigChange)
+	///
 
 	dns.HandleFunc(".", proxyQuery)
 
@@ -65,7 +63,6 @@ func Init() {
 	go loop(_cmdChannel)
 
 	resolveOnConfigChange()
-	responderOnConfigChange()
 }
 
 func Deinit() {
@@ -77,11 +74,24 @@ func Deinit() {
 	_wg.Wait()
 }
 
+func Load(files []string) {
+	_cmdChannel <- &dsnOpLoad{
+		dnsOp: dnsOp{
+			op: opLoad,
+		},
+		files:    files,
+		additive: true,
+	}
+}
+
 func CacheEnqueue(fqdn string) {
-	_cmdChannel <- &dnsOp{
-		op:   opAdd,
+	var op = dnsOpFqdn{
+		dnsOp: dnsOp{
+			op: opAdd,
+		},
 		fqdn: fqdn,
 	}
+	_cmdChannel <- op
 }
 
 func CacheClear() {

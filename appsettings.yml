@@ -15,14 +15,14 @@ Routing:
     Communities:
       - 65530:888
     Peers:
+      - Asn: 65531
+        Addr:
+          Ip: 192.168.151.41
+          Port: 179
       - Asn: 65530
         Addr:
           Ip: 192.168.151.42
           Port: 179
-      - Asn: 65530
-        Addr:
-         Ip: 192.168.151.41
-         Port: 179
       - Asn: 65530
         Addr:
           Ip: 192.168.151.43
@@ -47,21 +47,4 @@ Responder:
 Timeouts:
   DefaultTTL: 60
   TtlForZero: 30
-Names:
-  - 4pda.to
-  - brands.gm-cdn.com
-  - digitalocean.com
-  - currenttime.tv
-  - ibm.com
-  - intel.com
-  - jsfiddle.net
-  - netapp.com
-  - redhat.com
-  - rozetked.me
-  - ryan.himmelwright.net
-  - shizuku.rikka.app
-  - svoboda.org
-  - www.cadillac.com
-  - yt3.ggpht.com
-  - mil
-  -
+DomainListsFolder: "/root/config"

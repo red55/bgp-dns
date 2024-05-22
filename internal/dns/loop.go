@@ -12,15 +12,59 @@ const (
 	opAdd op = iota
 	opRemove
 	opClear
+	opLoad
 	opQuit
 )
 
+type dnsOpI interface {
+	Op() op
+}
+
 type dnsOp struct {
-	op   op
+	op op
+}
+
+func (o dnsOp) Op() op {
+	return o.op
+}
+
+type dnsOpFqdnI interface {
+	dnsOpI
+	Fqdn() string
+}
+type dnsOpFqdn struct {
+	dnsOp
 	fqdn string
 }
 
-var _cmdChannel = make(chan *dnsOp)
+func (o dnsOpFqdn) Fqdn() string {
+	return o.fqdn
+}
+
+func (o dnsOpFqdn) Op() op {
+	return o.op
+}
+
+type dnsOpLoadI interface {
+	Files() []string
+	Additive() bool
+}
+
+type dsnOpLoad struct {
+	dnsOp
+	files    []string
+	additive bool
+}
+
+func (o dsnOpLoad) Files() []string {
+	return o.files
+}
+
+func (o dsnOpLoad) Additive() bool {
+	return o.additive
+}
+
+var _cmdChannel = make(chan dnsOpI, 3)
 
 func calcTTL(de *Entry) uint32 {
 	var ttl = cfg.AppCfg.Timeouts().DefaultTTL()
@@ -29,14 +73,18 @@ func calcTTL(de *Entry) uint32 {
 		log.L().Infof("Refresher will sleep for %ds until %s for <empty>", ttl,
 			time.Now().Add(time.Duration(ttl)*time.Second))
 	} else {
-		var t = de.Expire().Sub(time.Now()).Seconds()
-		if t > 0 {
-			ttl = uint32(t)
-		} else {
-			log.L().Warnf("Looks like %v already expired. Missed time %f.", de, t)
-			de.SetTtl(ttl)
+		for {
+			t := de.Expire().Sub(time.Now()).Seconds()
+			if t > 0 {
+				ttl = uint32(t)
+				break
+			} else {
+				log.L().Warnf("Looks like %v already expired. Missed time %f.", de.Fqdn(), t)
+				de.SetTtl(ttl)
+				_cache.updateNextRefresh(true)
+				de = _cache.getNextRefresh()
+			}
 		}
-
 		log.L().Infof("Refresher will sleep for %ds until %s for %s", ttl, de.Expire(),
 			de.Fqdn())
 	}
@@ -44,35 +92,41 @@ func calcTTL(de *Entry) uint32 {
 	return ttl
 }
 
-func loop(c chan *dnsOp) {
+func loop(c chan dnsOpI) {
 	var ttl = uint32(1) // Until cfg is read on startup sleep only 1 sec
 	_wg.Add(1)
 	defer _wg.Done()
 	for {
 		select {
-		case op := <-c:
-			switch op.op {
+		case operation := <-c:
+			switch operation.Op() {
 			case opAdd:
-				if _, e := _Cache.add(op.fqdn); e == nil {
-					log.L().Debugf("Added %s to the _Cache.", op.fqdn)
+				o, _ := operation.(dnsOpFqdnI)
+				if _, e := _cache.add(o.Fqdn()); e == nil {
+					log.L().Debugf("Added %s to the cache.", o.Fqdn())
 				} else {
-					log.L().Debugf("Adding %s failed with %v", op.fqdn, e)
+					log.L().Debugf("Adding %s failed with %v", o.Fqdn(), e)
 				}
-
 			case opRemove:
-				if e := _Cache.remove(op.fqdn); e != nil {
+				o, _ := operation.(*dnsOpFqdn)
+				if e := _cache.remove(o.fqdn); e != nil {
 					log.L().Errorf("Remove failed: %v.", e)
 				}
+			case opLoad:
+				if l, ok := operation.(*dsnOpLoad); ok {
+					_cache.load(l.Files())
+				}
 			case opClear:
-				_Cache.clear()
+				_cache.clear()
 			case opQuit:
 				return
 			}
 		case <-time.After(time.Duration(ttl) * time.Second):
-			if e := resolve(_Cache.getNextRefresh()); e != nil {
+			// resolve can change next entry for refresh
+			if e := resolve(_cache.getNextRefresh()); e != nil {
 				log.L().Errorf("Refresh failed: %v.", e)
 			}
-			ttl = calcTTL(_Cache.getNextRefresh())
+			ttl = calcTTL(_cache.getNextRefresh())
 		}
 	}
 }

@@ -3,12 +3,14 @@ package dns
 import (
 	"errors"
 	"fmt"
+	"github.com/fsnotify/fsnotify"
 	"github.com/miekg/dns"
 	"github.com/red55/bgp-dns/internal/cfg"
+	"github.com/red55/bgp-dns/internal/fswatcher"
 	"github.com/red55/bgp-dns/internal/log"
 	"net"
 	"os"
-	"strings"
+	"path/filepath"
 )
 
 const dot = string('.')
@@ -19,18 +21,45 @@ func (e *errNXName) Error() string {
 	return "NX Name Error"
 }
 
+func onDirChange(ev fsnotify.Event) {
+	var e error
+	path, _ := filepath.Abs(ev.Name)
+	isLst, _ := filepath.Match(filepath.Join(cfg.AppCfg.DomainListsFolder(), "*.lst"), path)
+
+	if (ev.Has(fsnotify.Write) || ev.Has(fsnotify.Create)) && isLst {
+		path, e = filepath.Abs(path)
+
+		if e != nil {
+			log.L().Fatalf("Unable to get absolute path of %s", e)
+		}
+		Load([]string{path})
+	}
+}
+
 func resolveOnConfigChange() {
 
 	_resolvers.setResolvers(cfg.AppCfg.Resolvers())
 	_defaultResolvers.setResolvers(cfg.AppCfg.DefaultResolvers())
 
+	// fswatcher.StopWatcher()
 	CacheClear()
-	for _, n := range cfg.AppCfg.Names() {
-		d := strings.TrimSpace(n)
-		if len(d) > 0 {
-			CacheEnqueue(n)
+
+	if e := fswatcher.AddWatcher(onDirChange); e != nil {
+		log.L().Fatal(e)
+	}
+
+	// Simulate config folder change
+	config := cfg.AppCfg.DomainListsFolder()
+	if dir, e := os.ReadDir(config); e != nil {
+		log.L().Fatal(e)
+	} else {
+		for _, d := range dir {
+			if !d.IsDir() && filepath.Ext(d.Name()) == ".lst" {
+				fswatcher.TriggerCreate(filepath.Join(config, d.Name()))
+			}
 		}
 	}
+
 }
 
 func (r *resolversT) queryDns(q *dns.Msg) (*dns.Msg, error) {
@@ -86,57 +115,58 @@ func (r *resolversT) queryDns(q *dns.Msg) (*dns.Msg, error) {
 	}
 }
 
-func Resolve(de /*in, out*/ *Entry) error {
-	if de == nil {
-		return errors.New("nil entry")
+func Resolve(entry /*in, out*/ *Entry) ([]string, error) {
+	if entry == nil {
+		return nil, errors.New("nil entry")
 	}
 
-	if de.fqdn == "" {
-		return errors.New("missing fqdn")
+	if entry.fqdn == "" {
+		return nil, errors.New("missing fqdn")
 	}
 
-	if de.fqdn[len(de.fqdn)-1:] != dot {
-		de.fqdn = de.fqdn + dot
+	if entry.fqdn[len(entry.fqdn)-1:] != dot {
+		entry.fqdn = entry.fqdn + dot
 	}
+	previps := make([]string, len(entry.ips))
+	copy(previps, entry.ips)
 
 	q := new(dns.Msg)
-	q.SetQuestion(de.fqdn, dns.TypeA)
+	q.SetQuestion(entry.fqdn, dns.TypeA)
 
 	if r, e := _resolvers.queryDns(q); e != nil {
-		return e
+		return previps, e
 	} else {
 		if r.Rcode == dns.RcodeSuccess && r.Answer != nil {
-			de.r = r
-			de.ips = make([]string, 0, len(r.Answer))
+			entry.r = r
+			entry.ips = make([]string, 0, len(r.Answer))
 			ttl := uint32(0)
 			for _, rr := range r.Answer {
 				if a, ok := rr.(*dns.A); ok {
 					if ttl < a.Hdr.Ttl {
 						ttl = a.Hdr.Ttl
 					}
-
-					de.ips = append(de.ips, a.A.String())
+					entry.ips = append(entry.ips, a.A.String())
 				}
 			}
 			if ttl < cfg.AppCfg.Timeouts().TtlForZero() {
-				log.L().Debugf("Entry %s has ttl %d, so adjust it to default %d", de.Fqdn(),
+				log.L().Debugf("Entry %s has ttl %d, so adjust it to default %d", entry.Fqdn(),
 					ttl, cfg.AppCfg.Timeouts().TtlForZero())
 				ttl = cfg.AppCfg.Timeouts().TtlForZero()
 			}
-			de.SetTtl(ttl)
+			entry.SetTtl(ttl)
 
-			log.L().Debugf("Resolved: %v", de)
+			log.L().Debugf("Resolved: %v, previous IPs: %v", entry, previps)
 
 		} else {
 			if r.Rcode != dns.RcodeSuccess {
-				return fmt.Errorf("DNS server answered bad RCode %d, %w ", r.Rcode, &errNXName{})
+				return previps, fmt.Errorf("DNS server answered bad RCode %d, %w ", r.Rcode, &errNXName{})
 			}
 			log.L().Debugf("DNS query didn't return any RRs so set default timeout to retry later")
-			de.SetTtl(cfg.AppCfg.Timeouts().DefaultTTL())
+			entry.SetTtl(cfg.AppCfg.Timeouts().DefaultTTL())
 		}
 
 	}
-	return nil
+	return previps, nil
 }
 
 func resolve(entry *Entry) error {
@@ -145,11 +175,9 @@ func resolve(entry *Entry) error {
 		// behave as it normal.
 		return nil
 	}
-	previps := make([]string, len(entry.ips))
-	copy(previps, entry.ips)
-	e := Resolve(entry)
+	previps, e := Resolve(entry)
 
-	_Cache.updateNextRefresh(true)
+	_cache.updateNextRefresh(true)
 
 	if e == nil {
 		fireCallbacks(entry.Fqdn(), previps, entry.ips)
@@ -157,9 +185,9 @@ func resolve(entry *Entry) error {
 	}
 
 	if errors.Is(e, &errNXName{}) {
-		log.L().Debugf("Remove from _Cache %s as it is NXDOMAIN",
+		log.L().Debugf("Remove from cache %s as it is NXDOMAIN",
 			entry.Fqdn())
-		e = _Cache.remove(entry.Fqdn())
+		e = _cache.remove(entry.Fqdn())
 	}
 
 	return e
