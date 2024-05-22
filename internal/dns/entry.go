@@ -8,11 +8,12 @@ import (
 )
 
 type Entry struct {
-	fqdn   string
-	ttl    uint32
-	expire time.Time
-	ips    []string
-	r      *dns.Msg
+	fqdn       string
+	ttl        uint32
+	expire     time.Time
+	ips        []string
+	r          *dns.Msg
+	generation uint64
 }
 
 func NewEntry(fqdn string) *Entry {

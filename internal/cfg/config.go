@@ -163,13 +163,13 @@ func (r *routingT) Kernel() *kernRoutingT {
 }
 
 type appCfgT struct {
-	Lg        *zap.Config      `json:"Logging"`
-	Rt        *routingT        `json:"Routing"`
-	Touts     *appCfgTimeoutsT `json:"Timeouts"`
-	Rslvrs    []*net.UDPAddr   `json:"Resolvers"`
-	DefRslvrs []*net.UDPAddr   `json:"DefaultResolvers"`
-	Rspndr    *net.UDPAddr     `json:"Responder"`
-	Nms       []string         `json:"Names"`
+	Lg             *zap.Config      `json:"Logging"`
+	Rt             *routingT        `json:"Routing"`
+	Touts          *appCfgTimeoutsT `json:"Timeouts"`
+	Rslvrs         []*net.UDPAddr   `json:"Resolvers"`
+	DefRslvrs      []*net.UDPAddr   `json:"DefaultResolvers"`
+	Rspndr         *net.UDPAddr     `json:"Responder"`
+	DnsListsFolder string           `json:"DomainListsFolder"`
 }
 
 func (ac *appCfgT) Routing() *routingT {
@@ -185,14 +185,11 @@ func (ac *appCfgT) Timeouts() *appCfgTimeoutsT {
 	return ac.Touts
 }
 
-func (ac *appCfgT) Names() []string {
+func (ac *appCfgT) DomainListsFolder() string {
 	m.RLock()
 	defer m.RUnlock()
 
-	r := make([]string, len(ac.Nms))
-	copy(r, ac.Nms)
-
-	return r
+	return ac.DnsListsFolder
 }
 
 func (ac *appCfgT) Resolvers() []*net.UDPAddr {

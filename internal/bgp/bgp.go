@@ -12,8 +12,6 @@ import (
 	"net"
 	"net/netip"
 	"slices"
-	"strconv"
-	"strings"
 )
 
 func newBgpPath(prefix *bgpapi.IPAddressPrefix) *bgpapi.Path {
@@ -118,59 +116,17 @@ func onBgpEvent(event *bgpapi.WatchEventResponse) {
 	}
 }
 
-func path2String(p *bgpapi.Path) string {
-
-	var s = make([]string, 0, 4)
-	var ap bgpapi.IPAddressPrefix
-	_ = a2s(p.Nlri, &ap)
-
-	s = append(s, fmt.Sprintf("Prefix: %s", ap.Prefix))
-
-	var nh bgpapi.NextHopAttribute
-	if extractAttr(p.GetPattrs(), &nh) == nil {
-		s = append(s, fmt.Sprintf("Nexthop: %s", nh.NextHop))
-	}
-
-	s = append(s, fmt.Sprintf("Best: %t", p.GetBest()))
-	s = append(s, fmt.Sprintf("Withdraw: %t", p.GetIsWithdraw()))
-
-	var cs bgpapi.CommunitiesAttribute
-	if extractAttr(p.GetPattrs(), &cs) == nil {
-		s1 := make([]string, len(cs.Communities))
-		for _, c := range cs.Communities {
-			as := c >> 16
-			com := c & 0x00FF
-
-			s1 = append(s1, fmt.Sprintf("%d:%d", as, com))
-		}
-		s = append(s, strings.Join(s1, " "))
-	}
-
-	return strings.Join(s, ",")
-}
-
-func parseCommunity(c string) uint32 {
-	parts := strings.Split(c, ":")
-	if len(parts) != 2 {
-		return 0
-	}
-
-	as, _ := strconv.Atoi(parts[0])
-	comm, _ := strconv.Atoi(parts[1])
-
-	return (uint32(as) << 16) | uint32(comm)
-}
-
 func onBgpRoutingTableChange(event *bgpapi.WatchEventResponse_TableEvent) {
 	for _, p := range event.Paths {
-		log.L().Infof("[BGP] Path: %s", path2String(p))
+		sPath := path2String(p)
+		log.L().Infof("[BGP] Path: %s", sPath)
 
 		var idx = slices.IndexFunc(p.Pattrs, func(a *anypb.Any) bool {
 			return a.TypeUrl == "type.googleapis.com/apipb.CommunitiesAttribute"
 		})
 
 		if idx == -1 {
-			log.L().Debugf("Skiping path %v as it doesn't have community attr", p)
+			log.L().Debugf("Skiping path %s as it doesn't have community attr", sPath)
 			continue
 		}
 
@@ -183,14 +139,14 @@ func onBgpRoutingTableChange(event *bgpapi.WatchEventResponse_TableEvent) {
 		communitiesMatched := false
 		for _, c := range comms {
 			comm := parseCommunity(c)
-			if comm != 0 && slices.Index(cs.Communities, uint32(comm)) != -1 {
+			if comm != 0 && slices.Index(cs.Communities, comm) != -1 {
 				communitiesMatched = true
 				break
 			}
 		}
 
 		if !communitiesMatched {
-			log.L().Debugf("Skiping path %v as it's not marked with communities %v", p, comms)
+			log.L().Debugf("Skiping path %s as it's not marked with communities %v", sPath, comms)
 			continue
 		}
 

@@ -4,6 +4,7 @@ import (
 	"github.com/red55/bgp-dns/internal/bgp"
 	"github.com/red55/bgp-dns/internal/cfg"
 	"github.com/red55/bgp-dns/internal/dns"
+	"github.com/red55/bgp-dns/internal/fswatcher"
 	"github.com/red55/bgp-dns/internal/krt"
 	"github.com/red55/bgp-dns/internal/log"
 	"github.com/spf13/pflag"
@@ -28,7 +29,6 @@ func main() {
 
 	log.L().Infof("My configrution file: %s", configPath)
 	cfg.Init(configPath)
-
 	defer cfg.Deinit()
 
 	if e := log.Init(cfg.AppCfg.Log()); e != nil {
@@ -41,6 +41,9 @@ func main() {
 
 	bgp.Init()
 	defer bgp.Deinit()
+
+	fswatcher.Init()
+	defer fswatcher.Deinit()
 
 	dns.Init()
 	defer dns.Deinit()

@@ -26,7 +26,7 @@ func RegisterDnsCallback(cb CacheOperationCallback) error {
 	})
 
 	if found {
-		return fmt.Errorf("_Cache callback already registered")
+		return fmt.Errorf("cache callback already registered")
 	}
 	_cacheCallbacks.callbacks = append(_cacheCallbacks.callbacks, cb)
 

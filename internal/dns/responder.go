@@ -2,9 +2,7 @@ package dns
 
 import (
 	"github.com/miekg/dns"
-	"github.com/red55/bgp-dns/internal/cfg"
 	"github.com/red55/bgp-dns/internal/log"
-	"strings"
 )
 
 func proxyQuery(w dns.ResponseWriter, rq *dns.Msg) {
@@ -28,7 +26,7 @@ func respond(w dns.ResponseWriter, rq *dns.Msg) {
 		switch q.Qtype {
 		case dns.TypeA:
 			var de *Entry
-			if de, e = _Cache.add(q.Name); e != nil {
+			if de, e = _cache.add(q.Name); e != nil {
 				log.L().Errorf("Error resolving %s - %s", q.Name, e.Error())
 			} else {
 				var r = new(dns.Msg)
@@ -43,16 +41,6 @@ func respond(w dns.ResponseWriter, rq *dns.Msg) {
 		default:
 			//proxy to any resolver
 			proxyQuery(w, rq)
-		}
-	}
-}
-
-func responderOnConfigChange() {
-	for _, n := range cfg.AppCfg.Names() {
-		d := strings.TrimSpace(n)
-		if len(d) > 0 {
-			dns.HandleRemove(n)
-			dns.HandleFunc(n, respond)
 		}
 	}
 }
