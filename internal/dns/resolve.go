@@ -8,12 +8,15 @@ import (
 	"github.com/red55/bgp-dns/internal/cfg"
 	"github.com/red55/bgp-dns/internal/fswatcher"
 	"github.com/red55/bgp-dns/internal/log"
+	"math/rand"
 	"net"
 	"os"
 	"path/filepath"
 )
 
-const dot = string('.')
+const (
+	dot = string('.')
+)
 
 type errNXName struct{}
 
@@ -127,14 +130,14 @@ func Resolve(entry /*in, out*/ *Entry) ([]string, error) {
 	if entry.fqdn[len(entry.fqdn)-1:] != dot {
 		entry.fqdn = entry.fqdn + dot
 	}
-	previps := make([]string, len(entry.ips))
-	copy(previps, entry.ips)
+	prevIps := make([]string, len(entry.ips))
+	copy(prevIps, entry.ips)
 
 	q := new(dns.Msg)
 	q.SetQuestion(entry.fqdn, dns.TypeA)
 
 	if r, e := _resolvers.queryDns(q); e != nil {
-		return previps, e
+		return prevIps, e
 	} else {
 		if r.Rcode == dns.RcodeSuccess && r.Answer != nil {
 			entry.r = r
@@ -149,24 +152,33 @@ func Resolve(entry /*in, out*/ *Entry) ([]string, error) {
 				}
 			}
 			if ttl < cfg.AppCfg.Timeouts().TtlForZero() {
-				log.L().Debugf("Entry %s has ttl %d, so adjust it to default %d", entry.Fqdn(),
-					ttl, cfg.AppCfg.Timeouts().TtlForZero())
-				ttl = cfg.AppCfg.Timeouts().TtlForZero()
+				jitter := uint32(rand.Int31n(int32(cfg.AppCfg.Timeouts().Ttl4ZeroJitter)))
+				log.L().Debugf("Entry %s has ttl %d, so adjust it to default %d with jitter %d",
+					entry.Fqdn(),
+					ttl,
+					cfg.AppCfg.Timeouts().TtlForZero(),
+					jitter,
+				)
+				ttl = cfg.AppCfg.Timeouts().TtlForZero() - jitter
 			}
 			entry.SetTtl(ttl)
 
-			log.L().Debugf("Resolved: %v, previous IPs: %v", entry, previps)
+			log.L().Debugf("Resolved: name %s will expire at %s (%d), previous ips: %v",
+				entry.Fqdn(),
+				entry.Expire().String(),
+				entry.Ttl(),
+				prevIps)
 
 		} else {
 			if r.Rcode != dns.RcodeSuccess {
-				return previps, fmt.Errorf("DNS server answered bad RCode %d, %w ", r.Rcode, &errNXName{})
+				return prevIps, fmt.Errorf("DNS server answered bad RCode %d, %w ", r.Rcode, &errNXName{})
 			}
 			log.L().Debugf("DNS query didn't return any RRs so set default timeout to retry later")
 			entry.SetTtl(cfg.AppCfg.Timeouts().DefaultTTL())
 		}
 
 	}
-	return previps, nil
+	return prevIps, nil
 }
 
 func resolve(entry *Entry) error {
