@@ -107,8 +107,9 @@ func (b *bgpT) Communities() []string {
 }
 
 type appCfgTimeoutsT struct {
-	DfltTtl    uint32 `json:"DefaultTTL"`
-	TtlforZero uint32 `json:"TtlForZero"`
+	DfltTtl        uint32 `json:"DefaultTTL"`
+	TtlforZero     uint32 `json:"TtlForZero"`
+	Ttl4ZeroJitter uint32 `json:"Ttl4ZeroJitter"`
 }
 
 func (act *appCfgTimeoutsT) TtlForZero() uint32 {

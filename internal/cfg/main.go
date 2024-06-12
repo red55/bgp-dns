@@ -28,13 +28,21 @@ var _changeHandlers = ConfigChangeHandlerRegistry{
 	m:        sync.RWMutex{},
 }
 
+const (
+	defaultTtl     = 30
+	ttlForZero     = 30
+	ttl4ZeroJitter = 10
+)
+
 func init() {
 	AppCfg = &appCfgT{
 		Rslvrs: []*net.UDPAddr{
 			{IP: net.ParseIP("8.8.8.8"), Port: 53},
 		},
 		Touts: &appCfgTimeoutsT{
-			DfltTtl: 30,
+			DfltTtl:        defaultTtl,
+			TtlforZero:     ttlForZero,
+			Ttl4ZeroJitter: ttl4ZeroJitter,
 		},
 		Lg: log.NewDefaultConfig(),
 	}
