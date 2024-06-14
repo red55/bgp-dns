@@ -15,10 +15,6 @@ Routing:
     Communities:
       - 65530:888
     Peers:
-      - Asn: 65531
-        Addr:
-          Ip: 192.168.151.41
-          Port: 179
       - Asn: 65530
         Addr:
           Ip: 192.168.151.42
@@ -26,10 +22,14 @@ Routing:
       - Asn: 65530
         Addr:
           Ip: 192.168.151.43
-        Port: 179
+          Port: 179
       - Asn: 65530
         Addr:
           Ip: 192.168.151.44
+        Port: 179
+      - Asn: 65530
+        Addr:
+          Ip: 192.168.151.45
         Port: 179
 DefaultResolvers:
   - Ip: 77.88.8.1
@@ -47,4 +47,4 @@ Responder:
 Timeouts:
   DefaultTTL: 60
   TtlForZero: 30
-DomainListsFolder: "/root/config"
+DomainListsFolder: "./config"
