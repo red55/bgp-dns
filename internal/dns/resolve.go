@@ -25,16 +25,10 @@ func (e *errNXName) Error() string {
 }
 
 func onDirChange(ev fsnotify.Event) {
-	var e error
 	path, _ := filepath.Abs(ev.Name)
-	isLst, _ := filepath.Match(filepath.Join(cfg.AppCfg.DomainListsFolder(), "*.lst"), path)
+	isLst, _ := filepath.Match("*.lst", filepath.Base(ev.Name))
 
 	if (ev.Has(fsnotify.Write) || ev.Has(fsnotify.Create)) && isLst {
-		path, e = filepath.Abs(path)
-
-		if e != nil {
-			log.L().Fatalf("Unable to get absolute path of %s", e)
-		}
 		Load([]string{path})
 	}
 }
@@ -62,7 +56,6 @@ func resolveOnConfigChange() {
 			}
 		}
 	}
-
 }
 
 func (r *resolversT) queryDns(q *dns.Msg) (*dns.Msg, error) {
@@ -88,7 +81,7 @@ func (r *resolversT) queryDns(q *dns.Msg) (*dns.Msg, error) {
 			r.resolvers = r.resolvers.Next()
 
 			if head == r.resolvers {
-				log.L().Errorf("All DNS Servers didn't answer")
+				log.L().Errorf("All DNS Servers doesn't respond")
 
 				if errors.Is(e, os.ErrDeadlineExceeded) {
 					return nil, errors.Join(fmt.Errorf("DNS op for %v failed ", q.Question), e)
@@ -163,10 +156,11 @@ func Resolve(entry /*in, out*/ *Entry) ([]string, error) {
 			}
 			entry.SetTtl(ttl)
 
-			log.L().Debugf("Resolved: name %s will expire at %s (%d), previous ips: %v",
+			log.L().Debugf("Resolved: name %s will expire at %s (%d), ips: %v, prev: %v",
 				entry.Fqdn(),
 				entry.Expire().String(),
 				entry.Ttl(),
+				entry.ips,
 				prevIps)
 
 		} else {
