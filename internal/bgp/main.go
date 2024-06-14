@@ -229,13 +229,13 @@ func onDnsResolved(fqdn string, prevIps, ips []string) {
 	if gone == nil && arrived == nil {
 		b, e := knownNlri(ips)
 		if e != nil {
-			log.L().Error("Failed search in BGP tables: %v", e)
+			log.L().Errorf("Failed search in BGP tables: %v", e)
 		}
 		if b {
-			log.L().Debugf("Prefixes already in global table")
+			log.L().Debugf("Prefixes %v already in global table", ips)
 			return
 		} else {
-			log.L().Debugf("Will add prefixes to global table")
+			log.L().Debugf("Will add prefixes %v to global table", ips)
 			arrived = ips
 		}
 	}
