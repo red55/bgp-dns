@@ -35,8 +35,8 @@ func loop(c chan *routeOp) {
 			break
 		case opWithdraw:
 			withdraw(o.r.network, o.r.gateway, o.r.metric)
+			break
 		case opQuit:
-			//_routeTable.m.Lock()
 			for _, v := range _routeTable.routes {
 				for _, g := range v.gs {
 					rtnlWithdraw(v.n, g, v.m)
@@ -44,13 +44,8 @@ func loop(c chan *routeOp) {
 				clear(v.gs)
 			}
 			clear(_routeTable.routes)
-			return
-			/*for len(_routeTable.routes) > 0 {
-				r := _routeTable.routes
-				withdraw(r.n, r.gs, r.m)
-			}*/
 
-			//_routeTable.m.Unlock()
+			return
 		default:
 			log.L().Errorf("Krt loop got unknwon command: %v", o)
 			return
