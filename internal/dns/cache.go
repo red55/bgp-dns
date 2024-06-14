@@ -47,7 +47,7 @@ func (c *Cache) setGeneration(gen uint64) {
 func (c *Cache) updateNextRefresh(lock bool) {
 	found := c.findLeastTTLCacheEntry(lock)
 	log.L().Debugf("Found least TTL cache entry: %v", found)
-	c.setNextRefresh(found)
+	c.setNextRefresh(found, lock)
 }
 
 func (c *Cache) findLeastTTLCacheEntry(lock bool) *Entry {
@@ -74,6 +74,9 @@ func (c *Cache) findLeastTTLCacheEntry(lock bool) *Entry {
 func (c *Cache) find(dnsName string) *Entry {
 	c.m.RLock()
 	defer c.m.RUnlock()
+	if dnsName[len(dnsName)-1] != '.' {
+		dnsName += "."
+	}
 	foundIdx := slices.IndexFunc(c.entries, func(de *Entry) bool { return de.Fqdn() == dnsName })
 	if foundIdx > -1 {
 		return c.entries[foundIdx]
@@ -108,9 +111,11 @@ func (c *Cache) getNextRefresh() *Entry {
 	return c.nextRefresh
 }
 
-func (c *Cache) setNextRefresh(next *Entry) {
-	c.m.Lock()
-	defer c.m.Unlock()
+func (c *Cache) setNextRefresh(next *Entry, lock bool) {
+	if lock {
+		c.m.Lock()
+		defer c.m.Unlock()
+	}
 
 	c.nextRefresh = next
 }
@@ -168,6 +173,9 @@ func (c *Cache) loadFile(file string) error {
 	for scanner.Scan() {
 		fqdn := strings.TrimSpace(scanner.Text())
 		if len(fqdn) == 0 {
+			continue
+		}
+		if fqdn[0] == '#' {
 			continue
 		}
 		found := c.find(fqdn)
