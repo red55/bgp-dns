@@ -8,7 +8,6 @@ import (
 	"github.com/red55/bgp-dns/internal/dns"
 	"github.com/red55/bgp-dns/internal/log"
 	"github.com/red55/bgp-dns/internal/utils"
-	"net"
 	"sync"
 )
 
@@ -187,20 +186,20 @@ func Init() {
 	go loop(_cmdChannel)
 
 }
-func Add(ip net.IP, length uint32) {
+func Add(ip string, length uint32) {
 	_cmdChannel <- &bgpOp{
 		op: opAdd,
 		prefix: &bgpapi.IPAddressPrefix{
 			PrefixLen: length,
-			Prefix:    ip.String(),
+			Prefix:    ip,
 		},
 	}
 }
-func Remove(ip net.IP) {
+func Remove(ip string) {
 	_cmdChannel <- &bgpOp{
 		op: opRemove,
 		prefix: &bgpapi.IPAddressPrefix{
-			Prefix:    ip.String(),
+			Prefix:    ip,
 			PrefixLen: 32,
 		},
 	}
@@ -241,10 +240,10 @@ func onDnsResolved(fqdn string, prevIps, ips []string) {
 	}
 
 	for _, prev := range gone {
-		Remove(net.ParseIP(prev))
+		Remove(prev)
 	}
 	for _, ip := range arrived {
-		Add(net.ParseIP(ip), 32)
+		Add(ip, 32)
 	}
 
 }

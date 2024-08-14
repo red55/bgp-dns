@@ -154,6 +154,8 @@ func (c *Cache) evictByGeneration() {
 	for _, e := range prevG {
 		log.L().Debugf("Evicting entry: %s, gen: %d, current gen: %d", e.Fqdn(), e.generation, c.generation())
 		_ = c.remove(e.Fqdn())
+
+		fireCallbacks(e.Fqdn(), e.IPs(), nil)
 	}
 }
 
