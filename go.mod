@@ -8,12 +8,12 @@ require (
 	github.com/jsimonetti/rtnetlink v1.4.2
 	github.com/miekg/dns v1.1.61
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/osrg/gobgp/v3 v3.26.0
+	github.com/osrg/gobgp/v3 v3.29.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.18.2
 	go.uber.org/zap v1.27.0
-	golang.org/x/sys v0.21.0
+	golang.org/x/sys v0.24.0
 	google.golang.org/protobuf v1.34.1
 )
 
