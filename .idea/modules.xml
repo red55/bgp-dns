@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/bgp-dns.iml" filepath="$PROJECT_DIR$/.idea/bgp-dns.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/bgp-dnsd.iml" filepath="$PROJECT_DIR$/.idea/bgp-dnsd.iml" />
     </modules>
   </component>
 </project>

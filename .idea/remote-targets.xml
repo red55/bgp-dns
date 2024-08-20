@@ -2,13 +2,16 @@
 <project version="4">
   <component name="RemoteTargetsManager">
     <targets>
-      <target name="root@192.168.151.59:22" type="ssh/sftp" uuid="8efb923e-7de8-4e59-9828-f0330b378c0d">
+      <target name="WSL - Ubuntu" type="wsl" uuid="9d5f70f4-642a-42fb-9765-8f9f84fcb726">
         <config>
-          <option name="projectRootOnTarget" value="/root/bgp-dns" />
-          <option name="serverName" value="root@192.168.151.70:22 agent" />
+          <option name="distributionMsId" value="Ubuntu" />
+          <option name="projectRootOnTarget" value="{exitCode=1, timeout=false, cancelled=false, stdout=pwd: couldn't find directory entry in ‘..’ with matching i-node&#10;, stderr=}/bgp-dnsd" />
         </config>
         <ContributedStateBase type="GoLanguageRuntime">
-          <config />
+          <config>
+            <option name="goRoot" value="/usr/local/go/bin/go" />
+            <option name="goVersion" value="zsh:1: command not found: sh: 0: getcwd() failed: No such file or directory" />
+          </config>
         </ContributedStateBase>
       </target>
     </targets>
