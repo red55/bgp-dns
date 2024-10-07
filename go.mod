@@ -1,6 +1,7 @@
 module github.com/red55/bgp-dns
 
 go 1.22
+toolchain go1.22.8
 
 require (
 	github.com/Sytten/logrus-zap-hook v0.1.0
@@ -8,12 +9,12 @@ require (
 	github.com/jsimonetti/rtnetlink v1.4.2
 	github.com/miekg/dns v1.1.62
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/osrg/gobgp/v3 v3.29.0
+	github.com/osrg/gobgp/v3 v3.30.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.19.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/sys v0.24.0
+	golang.org/x/sys v0.25.0
 	google.golang.org/protobuf v1.34.2
 )
 
@@ -37,7 +38,7 @@ require (
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/vishvananda/netlink v1.2.1-beta.2 // indirect
+	github.com/vishvananda/netlink v1.2.1 // indirect
 	github.com/vishvananda/netns v0.0.4 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f // indirect
