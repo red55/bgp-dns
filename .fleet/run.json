@@ -1,0 +1,15 @@
+{
+    "configurations": [
+        {
+            "type": "go",
+            "name": "Win:bgp-dnsd",
+            "goExecPath": "C:\\Program Files\\Go\\bin\\go.exe",
+            "buildParams": [
+                "$PROJECT_DIR$\\cmd\\bgp-dnsd\\main.go"
+            ],
+            "runParams": [""],
+            "workingDir": "$PROJECT_DIR$",
+        },
+
+    ]
+}

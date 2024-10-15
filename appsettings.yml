@@ -1,0 +1,21 @@
+Log:
+  Level: Trace
+Dns:
+  Listen:
+    Ip: 127.0.0.1
+    Port: 53
+  Resolvers:
+    - Ip: 77.88.8.8
+      Port: 53
+    - Ip: 77.88.8.1
+      Port: 53
+  Cache:
+    MinTtl: 10
+    MaxEntries: 5
+  List:
+    File: sample\my.lst
+    Resolvers:
+      - Ip: 1.1.1.1
+        Port: 53
+      - Ip: 8.8.8.8
+        Port: 53

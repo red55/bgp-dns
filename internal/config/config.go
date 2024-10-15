@@ -1,20 +1,7 @@
 package config
 
-import (
-	"sync"
-)
-
-type appCfg struct {
-	m sync.RWMutex
-
-	L logCfg `yaml:"Log"`
+type AppCfg struct {
+    Log logCfg `yaml:"Log" json:"Log"`
+    Dns dnsCfg `yaml:"Dns" json:"Dns"`
 }
 
-func (cfg *appCfg) Log() logCfg {
-	cfg.m.RLock()
-	defer cfg.m.RUnlock()
-	cfg.L.m = &cfg.m
-	return cfg.L
-}
-
-var AppCfg *appCfg = &appCfg{}

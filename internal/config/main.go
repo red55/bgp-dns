@@ -1,16 +1,19 @@
 package config
 
 import (
+	"fmt"
 	"github.com/mitchellh/mapstructure"
+	"github.com/rs/zerolog"
+
+	//"github.com/rs/zerolog"
 	"github.com/spf13/viper"
-	"log"
 	"net"
 	"os"
 	"reflect"
 )
 
-func Init(path string) {
-	viper.SetConfigName("appsettings")
+func Init(path string) (*AppCfg, error) {
+	viper.SetConfigFile(path)
 	viper.SetConfigType("yaml")
 
 	_, err := os.Stat(path)
@@ -20,11 +23,12 @@ func Init(path string) {
 		viper.AddConfigPath(".")
 	}
 
-	if err := viper.ReadInConfig(); err != nil {
-		log.Fatalf("Unable to read application configuration: %v", err)
+	if err = viper.ReadInConfig(); err != nil {
+		return nil, fmt.Errorf("unable to read application configuration: %w", err)
 	}
+	var cfg = &AppCfg {}
 
-	if e := viper.Unmarshal(&AppCfg, func(config *mapstructure.DecoderConfig) {
+	if err = viper.Unmarshal(cfg, func(config *mapstructure.DecoderConfig) {
 		config.TagName = "json"
 		config.DecodeHook = mapstructure.ComposeDecodeHookFunc(func(from reflect.Type, to reflect.Type, data interface{}) (interface{}, error) {
 
@@ -33,8 +37,8 @@ func Init(path string) {
 					return net.ParseIP(data.(string)), nil
 				}
 
-				if to == reflect.TypeOf(zap.AtomicLevel{}) {
-					if l, e := zap.ParseAtomicLevel(data.(string)); e == nil {
+				if to == reflect.TypeOf(zerolog.DebugLevel) {
+					if l, e := zerolog.ParseLevel(data.(string)); e == nil {
 						return l, nil
 					} else {
 						return nil, e
@@ -44,7 +48,9 @@ func Init(path string) {
 
 			return data, nil
 		})
-	}); e != nil {
-		log.Fatalf("error loading config file into memory, %v", e)
+	}); err != nil {
+		return nil, fmt.Errorf("error loading config file into memory, %w", err)
 	}
+
+	return cfg, nil
 }
