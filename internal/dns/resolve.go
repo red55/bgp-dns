@@ -24,11 +24,22 @@ func resolve(w dns.ResponseWriter, q *dns.Msg)  {
 	i := slices.IndexFunc(a.Answer, func(rr dns.RR) bool {
 		return rr.Header().Rrtype == dns.TypeA
 	})
+	qn := q.Question[0].Name
 
 	if i > -1 {
-		if e = _cache.upsert(q.Question[0].Name, a); e != nil {
-			log.L().Error().Err(e)
+		if e = _cache.upsert(qn, a); e != nil {
+			log.L().Warn().Err(e)
 			return
 		}
+	} else {
+		log.L().Trace().Msgf("Empty Answer for %s, RCode: %d", qn, a.Rcode)
+		if _cache.has(qn) {
+			Unregister(qn)
+		} else {
+			log.L().Trace().Msgf("%s not in cache, ignore...", qn)
+		}
 	}
+//else {
+
+//	}
 }

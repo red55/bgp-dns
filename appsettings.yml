@@ -1,8 +1,19 @@
 Log:
   Level: Trace
+Bgp:
+  Asn: 65531
+  Id: "127.0.0.1"
+  Listen:
+      Ip: "0.0.0.0"
+      Port: 8179
+  Peers:
+    - Asn: 65530
+      Address:
+        Ip: "192.168.151.44"
+        Port: 179
 Dns:
   Listen:
-    Ip: 127.0.0.1
+    Ip: 0.0.0.0
     Port: 53
   Resolvers:
     - Ip: 77.88.8.8

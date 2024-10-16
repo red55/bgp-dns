@@ -56,7 +56,7 @@ func (rs *resolvers) query(q *dns.Msg) (*dns.Msg, error) {
 	head := rs.rs
 	for {
 		srv := rs.rs.Value.(*resolver)
-		log.L().Debug().Msgf("Using DNS server %v", srv.addr)
+		log.L().Debug().Msgf("Using DNS server %v for %s", srv.addr, q.Question[0].Name)
 
 		if a, e := dns.Exchange(q, srv.addr.String()); e == nil {
 			srv.ok = true
@@ -103,7 +103,7 @@ func (rs *resolvers) ResolveA(fqdn string) {
 
 }
 func proxyQuery(w dns.ResponseWriter, rq *dns.Msg) {
-	log.L().Debug().Msgf("Proxying request %v from: %s", rq, w.RemoteAddr().String())
+	log.L().Debug().Msgf("Proxying request %s(%d) from: %s", rq.Question[0].Name, rq.Question[0].Qtype, w.RemoteAddr().String())
 
 	if r, e := _resolvers.query(rq); e != nil {
 		log.L().Error().Msgf("Forwarding response to upstream responder failed %v", e)

@@ -7,7 +7,7 @@
             "buildParams": [
                 "$PROJECT_DIR$\\cmd\\bgp-dnsd\\main.go"
             ],
-            "runParams": [""],
+            "runParams": ["race"],
             "workingDir": "$PROJECT_DIR$",
         },
 

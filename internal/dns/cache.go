@@ -31,13 +31,17 @@ type cache struct {
 
 func newCache(max int, minTtl time.Duration, rs *resolvers) *cache{
 	return &cache{
-		pref:      prefixtree.New[cacheEntry](),
-		entries:   gcache.New(max).LFU().EvictedFunc(func (k interface{}, v interface{}) {
+		pref: prefixtree.New[cacheEntry](),
+		entries: gcache.New(max).LFU().EvictedFunc(func(k interface{}, v interface{}) {
 			log.L().Debug().Msgf("Evicting %s", k.(string))
-			bgp.Withdraw(v.(*cacheEntry).Ip4s())
+			if e := bgp.Withdraw(v.(*cacheEntry).Ip4s()); e != nil {
+				log.L().Error().Err(e).Msgf("Failed to withdraw IPs for %s", k.(string))
+			}
 		}).Build(),
-		rs: rs,
+		cancel: nil,
+		rs:     rs,
 		minTtl: minTtl,
+		gen:    atomic.Uint64{},
 	}
 }
 
@@ -73,6 +77,7 @@ func (c *cache) Shutdown(fn string) error {
 }
 
 func (c *cache) upsert(fqdn string, answer *dns.Msg) error {
+
 	var ce *cacheEntry
 	var cn = dns.CanonicalName(fqdn)
 	if t, e := c.entries.Get(cn); t == nil && !errors.Is(e, gcache.KeyNotFoundError) {
@@ -87,7 +92,7 @@ func (c *cache) upsert(fqdn string, answer *dns.Msg) error {
 	} else {
 		prevIps = ce.Ip4s()
 		ce.answer = answer
-		ce.ttl = minTtl(answer, c.minTtl) * time.Second
+		ce.updateTtl(c.minTtl)
 	}
 
 	var ips = ce.Ip4s()
@@ -98,6 +103,7 @@ func (c *cache) upsert(fqdn string, answer *dns.Msg) error {
 	_ = bgp.Withdraw(gone)
 
 	return c.entries.Set(fqdn, ce)
+
 }
 
 func (c* cache) findKeysByGeneration(gen uint64) []string {
@@ -115,5 +121,8 @@ func (c* cache) findKeysByGeneration(gen uint64) []string {
 	return r
 }
 
+func (c *cache) has(k string) bool{
+	return c.entries.Has(k)
+}
 
 

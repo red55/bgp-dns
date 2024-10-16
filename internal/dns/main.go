@@ -26,7 +26,6 @@ var (
 
 func Serve(ctx context.Context) error {
 	var cfg = ctx.Value("cfg").(*config.AppCfg)
-	//dns.HandleFunc(".", proxyQuery)
 
 	if nil != _cancel {
 		_cancel()
@@ -42,6 +41,7 @@ func Serve(ctx context.Context) error {
 			ReusePort: true,
 		}
 		_wg.Add(1)
+		dns.HandleFunc(".", proxyQuery)
 		if e := _server.ListenAndServe(); e != nil {
 			log.L().Fatal().Err(e).Msg("Failed to bind DSN resolver")
 		}

@@ -10,6 +10,7 @@ type cacheEntry struct {
 	gen atomic.Uint64
 	ttl time.Duration
 	answer 	*dns.Msg
+	expiration time.Time
 }
 var (
 	ENotAddressAnswer = errors.New("not an A/AAAA answer")
@@ -31,10 +32,15 @@ func minTtl (m *dns.Msg, minTtl time.Duration) (r time.Duration) {
 func newCacheEntry(m *dns.Msg, mTtl time.Duration, gen uint64) *cacheEntry{
 	ce := new(cacheEntry)
 	ce.answer = m
-	ce.ttl = minTtl(m, mTtl) * time.Second
+	ce.updateTtl(mTtl)
 	ce.setGeneration(gen)
 
 	return ce;
+}
+func (ce *cacheEntry) updateTtl(mTtlSeconds time.Duration) {
+	mTtlSeconds = minTtl(ce.answer, mTtlSeconds)
+	ce.ttl = mTtlSeconds
+	ce.expiration = time.Now().Add(ce.ttl * time.Second)
 }
 
 func (ce *cacheEntry) generation() uint64 {

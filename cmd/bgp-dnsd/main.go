@@ -2,6 +2,7 @@ package main
 import (
     "context"
     "errors"
+    "github.com/red55/bgp-dns/internal/bgp"
     "github.com/red55/bgp-dns/internal/config"
     "github.com/red55/bgp-dns/internal/dns"
     "github.com/red55/bgp-dns/internal/log"
@@ -36,9 +37,19 @@ func main() {
     ctx := context.Background()
     ctx = context.WithValue(ctx, "cfg", cfg)
     ctx, cancel := context.WithCancel(ctx)
+    defer cancel()
 
     c := make (chan os.Signal, 1)
     signal.Notify(c, os.Interrupt)
+
+    if e = bgp.Serve(ctx); e != nil {
+        panic(e)
+    }
+    defer func() {
+        if e = bgp.Shutdown(ctx); e != nil {
+            log.L().Err(e)
+        }
+    }()
 
     if e = dns.Serve(ctx); e != nil {
         panic(e)
@@ -57,7 +68,7 @@ func main() {
     select {
     case <-c :
         log.L().Info().Msg("Gracefully shutting down...")
-        cancel()
+        break
     case <-ctx.Done():
         if ctx.Err() != nil {
             log.L().Err(ctx.Err())
