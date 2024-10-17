@@ -16,7 +16,7 @@ func newBgpPath(prefix *bgpapi.IPAddressPrefix, asn uint32) *bgpapi.Path {
 		Origin: 1, // IGP
 	})
 	a2, _ := anypb.New(&bgpapi.NextHopAttribute{
-		NextHop: "192.168.151.250", //cfg.AppCfg.Routing().Bgp().Id()
+		NextHop: "255.255.255.255", //cfg.AppCfg.Routing().Bgp().Id()
 	})
 	a3, _ := anypb.New(&bgpapi.AsPathAttribute{
 		Segments: []*bgpapi.AsSegment{
