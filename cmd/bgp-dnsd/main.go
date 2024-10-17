@@ -11,7 +11,6 @@ import (
     "os"
     "os/signal"
     "path/filepath"
-    "runtime/debug"
 )
 type app struct {
     log.Log
@@ -43,7 +42,6 @@ func main() {
         Log: log.NewLog(log.L(), ""),
     }
 
-    bi, _ := debug.ReadBuildInfo()
     _app.L().Info().Msgf("Starting up %s (%s) built on %s...", version, commit, date )
     defer func () {
         _app.L().Info().Msg("Shutdown complete.")
