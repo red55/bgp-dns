@@ -4,9 +4,6 @@ import (
 	"context"
 	bgpapi "github.com/osrg/gobgp/v3/api"
 	bgpsrv "github.com/osrg/gobgp/v3/pkg/server"
-	"github.com/rs/zerolog"
-
-	//"github.com/cornelk/hashmap"
 	"github.com/red55/bgp-dns/internal/config"
 	"github.com/red55/bgp-dns/internal/log"
 	"github.com/red55/bgp-dns/internal/loop"
@@ -41,7 +38,7 @@ func Serve(ctx context.Context) (e error) {
 	_bgp = &bgpSrv{
 		Loop:         loop.NewLoop(1),
 		Log: log.NewLog(log.L(), "bgp"),
-		bgp:          bgpsrv.NewBgpServer(bgpsrv.LoggerOption(newZeroLogger(zerolog.InfoLevel))),
+		bgp:          bgpsrv.NewBgpServer(bgpsrv.LoggerOption(newZeroLogger(cfg.Log.Level))),
 		//ipRefCounter: hashmap.New[string, *atomic.Uint64](),
 		ipRefCounter: make(map[string]*atomic.Uint64),
 		asn: cfg.Bgp.Asn,
