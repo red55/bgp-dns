@@ -9,14 +9,14 @@ import (
 	"slices"
 )
 
-func newBgpPath(prefix *bgpapi.IPAddressPrefix, asn uint32) *bgpapi.Path {
+func newBgpPath(prefix *bgpapi.IPAddressPrefix, asn uint32, nh string) *bgpapi.Path {
 	nlri, _ := anypb.New(prefix)
 
 	a1, _ := anypb.New(&bgpapi.OriginAttribute{
 		Origin: 1, // IGP
 	})
 	a2, _ := anypb.New(&bgpapi.NextHopAttribute{
-		NextHop: "255.255.255.255", //cfg.AppCfg.Routing().Bgp().Id()
+		NextHop: nh,
 	})
 	a3, _ := anypb.New(&bgpapi.AsPathAttribute{
 		Segments: []*bgpapi.AsSegment{
@@ -42,7 +42,7 @@ func (s *bgpSrv) add(prefix *bgpapi.IPAddressPrefix, asn uint32) error {
 	s.L().Info().Msgf("Adding prefix: %s", prefix.String())
 	//TODO: pass context
 	if _, e := s.bgp.AddPath(context.Background(), &bgpapi.AddPathRequest{
-		Path: newBgpPath(prefix, asn),
+		Path: newBgpPath(prefix, asn, s.id.String()),
 	}); e != nil {
 		return fmt.Errorf("unable to add path: %v, %w", prefix, e)
 	}
@@ -96,7 +96,7 @@ func (s *bgpSrv) remove(prefix *bgpapi.IPAddressPrefix, asn uint32) error {
 	found, _ := s.find([]*bgpapi.IPAddressPrefix{prefix})
 	if found != nil {
 		e := s.bgp.DeletePath(context.Background(), &bgpapi.DeletePathRequest{
-			Path: newBgpPath(prefix, asn),
+			Path: newBgpPath(prefix, asn, s.id.String()),
 		})
 		return e
 	}

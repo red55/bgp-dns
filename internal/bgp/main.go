@@ -7,6 +7,7 @@ import (
 	"github.com/red55/bgp-dns/internal/config"
 	"github.com/red55/bgp-dns/internal/log"
 	"github.com/red55/bgp-dns/internal/loop"
+	"net"
 	"sync"
 	"sync/atomic"
 )
@@ -20,6 +21,7 @@ type bgpSrv struct {
 	cancel context.CancelFunc
 	wg sync.WaitGroup
 	asn uint32
+	id net.IP
 }
 
 
@@ -42,6 +44,7 @@ func Serve(ctx context.Context) (e error) {
 		//ipRefCounter: hashmap.New[string, *atomic.Uint64](),
 		ipRefCounter: make(map[string]*atomic.Uint64),
 		asn: cfg.Bgp.Asn,
+		id: cfg.Bgp.Id,
 	}
 	go func () {
 		_bgp.bgp.Serve()
