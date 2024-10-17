@@ -17,7 +17,12 @@ type app struct {
     log.Log
 }
 
-var _app *app
+var (
+    _app *app
+    version = "dev"
+    commit  = "none"
+    date    = "unknown"
+)
 
 func main() {
     pflag.StringP("config", "c", "appsettings.yml", "Path to configuration file.")
@@ -39,7 +44,7 @@ func main() {
     }
 
     bi, _ := debug.ReadBuildInfo()
-    _app.L().Info().Msgf("Starting up %s...", bi.Main.Version )
+    _app.L().Info().Msgf("Starting up %s (%s) built on %s...", version, commit, date )
     defer func () {
         _app.L().Info().Msg("Shutdown complete.")
     }()
