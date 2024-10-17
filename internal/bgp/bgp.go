@@ -3,7 +3,6 @@ import (
 	"context"
 	"fmt"
 	bgpapi "github.com/osrg/gobgp/v3/api"
-	"github.com/red55/bgp-dns/internal/log"
 	"google.golang.org/protobuf/types/known/anypb"
 	"errors"
 	"net/netip"
@@ -22,7 +21,7 @@ func newBgpPath(prefix *bgpapi.IPAddressPrefix, asn uint32) *bgpapi.Path {
 	a3, _ := anypb.New(&bgpapi.AsPathAttribute{
 		Segments: []*bgpapi.AsSegment{
 			{
-				Type:    2,
+				Type:    bgpapi.AsSegment_AS_SEQUENCE,
 				Numbers: []uint32{asn},
 			},
 		},
@@ -40,7 +39,7 @@ func (s *bgpSrv) add(prefix *bgpapi.IPAddressPrefix, asn uint32) error {
 		return fmt.Errorf("prefix is nil")
 	}
 
-	log.L().Info().Msgf("Adding prefix: %s", prefix.String())
+	s.L().Info().Msgf("Adding prefix: %s", prefix.String())
 	//TODO: pass context
 	if _, e := s.bgp.AddPath(context.Background(), &bgpapi.AddPathRequest{
 		Path: newBgpPath(prefix, asn),

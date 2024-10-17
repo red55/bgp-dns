@@ -1,7 +1,7 @@
 Log:
   Level: Trace
 Bgp:
-  Asn: 65531
+  Asn: 65530
   Id: "127.0.0.1"
   Listen:
       Ip: "0.0.0.0"

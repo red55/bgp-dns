@@ -5,6 +5,7 @@ import (
     "github.com/red55/bgp-dns/internal/bgp"
     "github.com/red55/bgp-dns/internal/config"
     "github.com/red55/bgp-dns/internal/dns"
+    "github.com/red55/bgp-dns/internal/fswatcher"
     "github.com/red55/bgp-dns/internal/log"
     "github.com/spf13/pflag"
     "os"
@@ -12,6 +13,12 @@ import (
     "path/filepath"
     "runtime/debug"
 )
+type app struct {
+    log.Log
+}
+
+var _app *app
+
 func main() {
     pflag.StringP("config", "c", "appsettings.yml", "Path to configuration file.")
     pflag.Parse()
@@ -27,11 +34,14 @@ func main() {
     }
 
     log.Init(cfg)
+    _app = &app{
+        Log: log.NewLog(log.L(), ""),
+    }
 
     bi, _ := debug.ReadBuildInfo()
-    log.L().Info().Msgf("Starting up %s...", bi.Main.Version )
+    _app.L().Info().Msgf("Starting up %s...", bi.Main.Version )
     defer func () {
-        log.L().Info().Msg("Shutdown complete.")
+        _app.L().Info().Msg("Shutdown complete.")
     }()
 
     ctx := context.Background()
@@ -47,7 +57,7 @@ func main() {
     }
     defer func() {
         if e = bgp.Shutdown(ctx); e != nil {
-            log.L().Err(e)
+            _app.L().Err(e)
         }
     }()
 
@@ -56,7 +66,7 @@ func main() {
     }
     defer func() {
         if e = dns.Shutdown(ctx); e != nil {
-            log.L().Err(e)
+            _app.L().Err(e)
         }
     }()
 
@@ -64,14 +74,23 @@ func main() {
         panic(e)
     }
 
-    log.L().Info().Msg("Startup complete.")
+    if e = fswatcher.Serve(ctx); e != nil {
+        panic(e)
+    }
+    defer func() {
+        if e = fswatcher.Shutdown(ctx); e != nil {
+            _app.L().Err(e)
+        }
+    }()
+
+    _app.L().Info().Msg("Startup complete.")
     select {
     case <-c :
-        log.L().Info().Msg("Gracefully shutting down...")
+        _app.L().Info().Msg("Gracefully shutting down...")
         break
     case <-ctx.Done():
         if ctx.Err() != nil {
-            log.L().Err(ctx.Err())
+            _app.L().Err(ctx.Err())
         }
     }
 }

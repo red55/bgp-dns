@@ -3,6 +3,7 @@ package loop
 import (
 	//"context"
 	//"time"
+//	"github.com/red55/bgp-dns/internal/log"
 )
 
 type loopOp struct {
@@ -23,19 +24,43 @@ func (l *Loop) Chan() chan *loopOp{
 	return l.opCh
 }
 
-func (l *Loop) Operation(f func () error) (e error) {
-	ec := make(chan error)
-	defer func() { e = <-ec }()
+func (l *Loop) Operation(f func () error, ret bool) (e error) {
+	//log.L().Trace().Caller(1).Msg("-> loop.Operation")
+	var ec chan error
+	if ret {
+		ec = make(chan error)
+	}
+	defer func() {
+		if nil != ec {
+			//log.L().Trace().Caller(2).Msg("-- loop.Read return")
+			e = <-ec
+		}
+
+		//log.L().Trace().Caller(2).Msg("<- loop.Operation")
+	}()
 	l.Chan() <- &loopOp{
 		f:     f,
 		errCh: ec,
 	}
 	return
 }
+func (l *Loop) NoErr(o *loopOp) {
+	if nil != o.errCh {
+		o.errCh <- nil
+	}
+
+	_ = o.f()
+}
 
 func (l *Loop) NoOp(o *loopOp) {
-	o.errCh <- nil
+	if nil != o.errCh {
+		o.errCh <- nil
+	}
 }
 func (l *Loop) HandleOp(o *loopOp) {
-	o.errCh <- o.f()
+	if nil != o.errCh {
+		o.errCh <- o.f()
+	} else {
+		_ = o.f()
+	}
 }

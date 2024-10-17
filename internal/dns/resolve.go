@@ -1,22 +1,21 @@
 package dns
 import (
-	"github.com/red55/bgp-dns/internal/log"
 	"github.com/miekg/dns"
 	"slices"
 )
 
-func resolve(w dns.ResponseWriter, q *dns.Msg)  {
+func (c *cache) resolve(w dns.ResponseWriter, q *dns.Msg)  {
 	var a *dns.Msg
 	var e error
 
-	if a, e = _cache.rs.query(q); e != nil {
-		log.L().Error().Err(e)
+	if a, e = c.rs.query(q); e != nil {
+		c.L().Error().Err(e)
 		return
 	}
 
 	if w != nil {
 		if e = w.WriteMsg(a); e != nil {
-			log.L().Error().Err(e)
+			c.L().Error().Err(e)
 			return
 		}
 	}
@@ -27,19 +26,18 @@ func resolve(w dns.ResponseWriter, q *dns.Msg)  {
 	qn := q.Question[0].Name
 
 	if i > -1 {
-		if e = _cache.upsert(qn, a); e != nil {
-			log.L().Warn().Err(e)
+		if e = c.upsert(qn, a); e != nil {
+			c.L().Warn().Err(e)
 			return
 		}
 	} else {
-		log.L().Trace().Msgf("Empty Answer for %s, RCode: %d", qn, a.Rcode)
-		if _cache.has(qn) {
-			Unregister(qn)
+		c.L().Trace().Msgf("Empty Answer for %s, RCode: %d", qn, a.Rcode)
+		if c.has(qn) {
+			if e = c.unregister(qn); e!=nil {
+				c.L().Error().Err(e).Msgf("Failed to unregister %s from resolve", qn)
+			}
 		} else {
-			log.L().Trace().Msgf("%s not in cache, ignore...", qn)
+			c.L().Trace().Msgf("%s not in cache, ignore...", qn)
 		}
 	}
-//else {
-
-//	}
 }

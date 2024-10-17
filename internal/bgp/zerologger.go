@@ -7,18 +7,17 @@ import (
 )
 
 type zeroLogger struct {
-	lg zerolog.Logger
-	l zerolog.Level
+	log.Log
 }
 
 
-func newZeroLogger(l zerolog.Level) bgplog.Logger {
-	r := &zeroLogger{
-		lg: log.L().With().Str("m", "bgp").Logger(),
-		l: l,
-	}
+func newZeroLogger(lvl zerolog.Level) bgplog.Logger {
+	l := log.L().Level(lvl)
 
-	r.SetLevel(zeroLogLevel2bgpLogLevel(l))
+	r := &zeroLogger{
+		Log: log.NewLog(&l,"bgp"),
+	}
+	r.Log.SetLevel(lvl)
 
 	return r
 }
@@ -30,30 +29,30 @@ func withFields(e *zerolog.Event, fields bgplog.Fields) *zerolog.Event {
 	return e
 }
 func (h *zeroLogger) Panic(msg string, fields bgplog.Fields) {
-	withFields(log.L().Panic(), fields).Msg(msg)
+	withFields(h.L().Panic(), fields).Msg(msg)
 }
 func (h *zeroLogger) Fatal(msg string, fields bgplog.Fields) {
-	withFields(log.L().Fatal(), fields).Msg(msg)
+	withFields(h.L().Fatal(), fields).Msg(msg)
 }
 func (h *zeroLogger) Error(msg string, fields bgplog.Fields) {
-	withFields(log.L().Error(), fields).Msg(msg)
+	withFields(h.L().Error(), fields).Msg(msg)
 }
 func (h *zeroLogger) Warn(msg string, fields bgplog.Fields) {
-	withFields(log.L().Warn(), fields).Msg(msg)
+	withFields(h.L().Warn(), fields).Msg(msg)
 }
 func (h *zeroLogger) Info(msg string, fields bgplog.Fields) {
-	withFields(log.L().Info(), fields).Msg(msg)
+	withFields(h.L().Info(), fields).Msg(msg)
 }
 func (h *zeroLogger) Debug(msg string, fields bgplog.Fields) {
-	withFields(log.L().Debug(), fields).Msg(msg)
+	withFields(h.L().Debug(), fields).Msg(msg)
 }
 func (h *zeroLogger) SetLevel(level bgplog.LogLevel) {
-	h.l = bgpLogLevel2ZeroLogLevel(level)
-	h.lg = h.lg.Level(h.l)
+	lvl := bgpLogLevel2ZeroLogLevel(level)
+	h.Log.SetLevel(lvl)
 }
 
 func (h *zeroLogger)  GetLevel() bgplog.LogLevel {
-	return zeroLogLevel2bgpLogLevel(log.L().GetLevel())
+	return zeroLogLevel2bgpLogLevel(h.Log.Level())
 }
 
 func zeroLogLevel2bgpLogLevel(l zerolog.Level) bgplog.LogLevel {

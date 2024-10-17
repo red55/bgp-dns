@@ -4,7 +4,9 @@ import (
 	"context"
 	bgpapi "github.com/osrg/gobgp/v3/api"
 	bgpsrv "github.com/osrg/gobgp/v3/pkg/server"
-	"github.com/cornelk/hashmap"
+	"github.com/rs/zerolog"
+
+	//"github.com/cornelk/hashmap"
 	"github.com/red55/bgp-dns/internal/config"
 	"github.com/red55/bgp-dns/internal/log"
 	"github.com/red55/bgp-dns/internal/loop"
@@ -14,12 +16,15 @@ import (
 
 type bgpSrv struct {
 	loop.Loop
+	log.Log
 	bgp *bgpsrv.BgpServer
-	ipRefCounter  *hashmap.Map[string, *atomic.Uint64]
+	//ipRefCounter  *hashmap.Map[string, *atomic.Uint64]
+	ipRefCounter map[string]*atomic.Uint64
 	cancel context.CancelFunc
 	wg sync.WaitGroup
 	asn uint32
 }
+
 
 var (
 
@@ -35,8 +40,10 @@ func Serve(ctx context.Context) (e error) {
 	cfg := ctx.Value("cfg").(*config.AppCfg)
 	_bgp = &bgpSrv{
 		Loop:         loop.NewLoop(1),
-		bgp:          bgpsrv.NewBgpServer(bgpsrv.LoggerOption(newZeroLogger(cfg.Log.Level))),
-		ipRefCounter: hashmap.New[string, *atomic.Uint64](),
+		Log: log.NewLog(log.L(), "bgp"),
+		bgp:          bgpsrv.NewBgpServer(bgpsrv.LoggerOption(newZeroLogger(zerolog.InfoLevel))),
+		//ipRefCounter: hashmap.New[string, *atomic.Uint64](),
+		ipRefCounter: make(map[string]*atomic.Uint64),
 		asn: cfg.Bgp.Asn,
 	}
 	go func () {
@@ -58,7 +65,7 @@ func Serve(ctx context.Context) (e error) {
 			},
 		},
 	}); e != nil {
-		log.L().Panic().Err(e).Msg("Failed to start BGP instance")
+		_bgp.L().Panic().Err(e).Msg("Failed to start BGP instance")
 	}
 
 	for _, peer := range cfg.Bgp.Peers {
@@ -108,7 +115,7 @@ func Serve(ctx context.Context) (e error) {
 				},
 			},
 			}); e != nil {
-				log.L().Fatal().Err(e).Msgf("Failed to add peer %s", peer.Addr.String())
+				_bgp.L().Fatal().Err(e).Msgf("Failed to add peer %s", peer.Addr.String())
 			}
 	}
 
@@ -118,7 +125,7 @@ func Serve(ctx context.Context) (e error) {
 }
 func Shutdown(ctx context.Context) (e error) {
 	if e = _bgp.bgp.StopBgp(ctx,  &bgpapi.StopBgpRequest{}); e != nil {
-		log.L().Panic().Err(e).Msg("Failed to shutdown BGP instance")
+		_bgp.L().Panic().Err(e).Msg("Failed to shutdown BGP instance")
 	}
 	_bgp.cancel()
 	_bgp.bgp.Stop()
@@ -130,43 +137,50 @@ func Advance(ips []string) error {
 	return _bgp.Operation(func () (e error) {
 		for _, ip := range ips {
 			counter := new(atomic.Uint64)
-			refs, _ := _bgp.ipRefCounter.GetOrInsert(ip, counter)
+			_bgp.L().Trace().Msgf("Before GetOrInsert: %s", ip)
+
+			refs, ok := _bgp.ipRefCounter[ip]
+			if !ok {
+				refs = counter
+				_bgp.ipRefCounter[ip] = counter
+			}
+			_bgp.L().Trace().Msgf("After GetOrInsert: %s, %v, %t", ip, refs, ok)
 			c := refs.Add(1)
 			if  c == 1 {
-				log.L().Debug().Msgf("Advance IPs: %v", ip)
+				_bgp.L().Debug().Msgf("Advance IPs: %s", ip)
 				prefix := &bgpapi.IPAddressPrefix{
 					PrefixLen: 32,
 					Prefix:    ip,
 				}
 				e = _bgp.add(prefix, _bgp.asn)
 			} else {
-				log.L().Debug().Msgf("No need to change BGP, %v(%d)", ip, c)
+				_bgp.L().Debug().Msgf("No need to change BGP, %v(%d)", ip, c)
 			}
 		}
 		return
-	})
+	}, true)
 }
 
 func Withdraw(ips []string) error {
 	return _bgp.Operation( func () (e error) {
 		for _, ip := range ips {
-			if refs, exists := _bgp.ipRefCounter.Get(ip); exists {
+			if refs, exists := _bgp.ipRefCounter[ip]; exists {
 				c := refs.Add(^uint64(0))
 				if c < 1 {
-					log.L().Debug().Msgf("Withdraw IPs: %v", ip)
+					_bgp.L().Debug().Msgf("Withdraw IPs: %v", ip)
 					prefix := &bgpapi.IPAddressPrefix{
 						PrefixLen: 32,
 						Prefix:    ip,
 						}
 						if e = _bgp.remove(prefix, _bgp.asn); e != nil {
-							log.L().Error().Err(e)
+							_bgp.L().Error().Err(e)
 						}
-						_bgp.ipRefCounter.Del(ip)
+						delete(_bgp.ipRefCounter, ip)
 				} else {
-					log.L().Debug().Msgf("No need to change BGP, %v(%d)", ip, c)
+					_bgp.L().Debug().Msgf("No need to change BGP, %v(%d)", ip, c)
 				}
 			}
 		}
 		return
-	})
+	}, true)
 }
