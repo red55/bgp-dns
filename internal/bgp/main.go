@@ -99,6 +99,7 @@ func Serve(ctx context.Context) (e error) {
 				Transport: &bgpapi.Transport{
 					PassiveMode:  peer.PassiveMode,
 					MtuDiscovery: true,
+					LocalAddress: cfg.Bgp.Listen.IP.String(),
 				},
 				RouteServer: &bgpapi.RouteServer{
 					RouteServerClient: false,
