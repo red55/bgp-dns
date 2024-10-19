@@ -17,15 +17,16 @@ func (c *cache) loop(ctx context.Context) {
 	cfg := ctx.Value("cfg").(*config.AppCfg)
 	L:
 	for {
-		all := c.entries.GetALL(true)
 		var sleepUntil time.Time
+		now := time.Now()
+
+		all := c.entries.GetALL(true)
+
 		if len(all) > 0 {
 			sleepUntil = all[c.entries.Keys(true)[0]].(*cacheEntry).expiration
 		} else {
 			sleepUntil = time.Now().Add(cfg.Dns.Cache.MinTtl * time.Second)
 		}
-
-		now := time.Now()
 
 		for k,v := range all {
 			ce := v.(*cacheEntry)
@@ -37,7 +38,7 @@ func (c *cache) loop(ctx context.Context) {
 				q.SetQuestion(cn, dns.TypeA)
 				c.L().Debug().Msgf("Resolving cached %s", k.(string))
 				// resolve will call cache.upsert on resolved IPs
-				c.resolve(nil, q)
+				c.resolve(nil, q, false)
 				c.L().Trace().Msgf("New %s, ttl:%d, expire: %s", k.(string), ce.ttl,ce.expiration.Format(time.RFC3339))
 			}
 
@@ -49,12 +50,13 @@ func (c *cache) loop(ctx context.Context) {
 		if sleepUntil.Sub(now) < cfg.Dns.Cache.MinTtl * time.Second {
 			sleepUntil = now.Add(cfg.Dns.Cache.MinTtl * time.Second)
 		}
+
 		c.L().Info().Msgf("DSN Refresher will sleep until %s for %d seconds", sleepUntil.Format(time.RFC3339),
 			sleepUntil.Sub(now) / time.Second)
 		timeout, cancelTimeout := context.WithDeadline(ctx, sleepUntil)
 
 		select {
-		case o := <- c.Chan():
+		case o := <- c.ChanOp():
 			cancelTimeout()
 			c.HandleOp(o)
 			continue

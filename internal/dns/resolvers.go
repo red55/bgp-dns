@@ -61,6 +61,7 @@ func (rs *resolvers) query(q *dns.Msg) (*dns.Msg, error) {
 		rs.L().Debug().Msgf("Using DNS %v for %s", srv.addr, q.Question[0].Name)
 
 		if a, e := dns.Exchange(q, srv.addr.String()); e == nil {
+			rs.L().Trace().Msgf("Got answer %d", len(a.Answer))
 			srv.ok = true
 			return a, nil
 		} else {

@@ -10,7 +10,7 @@ func (s *bgpSrv) loop(ctx context.Context) {
 	}()
 L:	for {
 		select {
-		case o := <- s.Chan():
+		case o := <- s.ChanOp():
 			s.HandleOp(o)
 			break
 		case <- ctx.Done():

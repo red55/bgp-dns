@@ -15,7 +15,7 @@ func newZeroLogger(lvl zerolog.Level) bgplog.Logger {
 	l := log.L().Level(lvl)
 
 	r := &zeroLogger{
-		Log: log.NewLog(&l,"bgp"),
+		Log: log.NewLog(&l,"gobgp"),
 	}
 	r.Log.SetLevel(lvl)
 

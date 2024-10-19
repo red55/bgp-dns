@@ -4,7 +4,7 @@ import (
 	"slices"
 )
 
-func (c *cache) resolve(w dns.ResponseWriter, q *dns.Msg)  {
+func (c *cache) resolve(w dns.ResponseWriter, q *dns.Msg, notfiyChanged bool)  {
 	var a *dns.Msg
 	var e error
 
@@ -30,11 +30,19 @@ func (c *cache) resolve(w dns.ResponseWriter, q *dns.Msg)  {
 			c.L().Warn().Err(e)
 			return
 		}
+		if notfiyChanged {
+			c.notfiyChanged(qn)
+		}
+
 	} else {
 		c.L().Trace().Msgf("Empty Answer for %s, RCode: %d", qn, a.Rcode)
 		if c.has(qn) {
 			if e = c.unregister(qn); e!=nil {
 				c.L().Error().Err(e).Msgf("Failed to unregister %s from resolve", qn)
+				return
+			}
+			if notfiyChanged {
+				c.notfiyChanged(qn)
 			}
 		} else {
 			c.L().Trace().Msgf("%s not in cache, ignore...", qn)

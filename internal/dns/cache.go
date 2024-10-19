@@ -89,7 +89,8 @@ func (c *cache) shutdown() error {
 }
 
 func (c *cache) upsert(fqdn string, answer *dns.Msg) error {
-
+	c.L().Trace().Msgf("-> upsert(%s)", fqdn)
+	defer c.L().Trace().Msgf("<- upsert(%s)", fqdn)
 	var ce *cacheEntry
 	var cn = dns.CanonicalName(fqdn)
 	if t, e := c.entries.Get(cn); t == nil && !errors.Is(e, gcache.KeyNotFoundError) {
@@ -119,10 +120,7 @@ func (c *cache) upsert(fqdn string, answer *dns.Msg) error {
 		c.L().Error().Err(e)
 		return e
 	}
-	return c.Operation(func () error {
-		c.L().Debug().Msgf("Signaling cache changed for %s", cn)
-		return nil
-	}, false)
+	return nil
 
 }
 
@@ -150,12 +148,14 @@ func (c* cache) register(fqdn string) error {
 		return fmt.Errorf("'%s'. %w", fqdn, EInvalidFQDN)
 	}
 	cn := dns.CanonicalName(fqdn)
-	dns.HandleFunc(dns.CanonicalName(fqdn), c.resolve)
+	dns.HandleFunc(dns.CanonicalName(fqdn), func (rw dns.ResponseWriter, m* dns.Msg) {
+		c.resolve (rw, m, true)
+	})
 
 	q := new(dns.Msg)
 	q.SetQuestion(cn, dns.TypeA)
 	// resolve will call cache.upsert on resolved IPs
-	c.resolve(nil, q)
+	c.resolve(nil, q, false)
 
 	return nil
 }
@@ -229,4 +229,11 @@ func (c *cache) evictByGeneration(gen uint64) error {
 	}
 
 	return nil
+}
+
+func (c *cache) notfiyChanged(cn string) {
+	c.Operation(func () error {
+		c.L().Debug().Msgf("Signaling cache changed for %s", cn)
+		return nil
+	}, false)
 }

@@ -22,7 +22,7 @@ Dns:
       Port: 53
   Cache:
     MinTtl: 10
-    MaxEntries: 5
+    MaxEntries: 5000
   List:
     File: sample\my.lst
     Resolvers:

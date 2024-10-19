@@ -164,6 +164,8 @@ func Advance(ips []string) error {
 
 func Withdraw(ips []string) error {
 	return _bgp.Operation( func () (e error) {
+		_bgp.L().Trace().Msgf("-> Withdraw")
+		defer _bgp.L().Trace().Msgf("<- Withdraw")
 		for _, ip := range ips {
 			if refs, exists := _bgp.ipRefCounter[ip]; exists {
 				c := refs.Add(^uint64(0))
@@ -176,7 +178,9 @@ func Withdraw(ips []string) error {
 						if e = _bgp.remove(prefix, _bgp.asn); e != nil {
 							_bgp.L().Error().Err(e)
 						}
+						_bgp.L().Trace().Msg("Before map delete")
 						delete(_bgp.ipRefCounter, ip)
+						_bgp.L().Trace().Msg("After map delete")
 				} else {
 					_bgp.L().Debug().Msgf("No need to change BGP, %v(%d)", ip, c)
 				}

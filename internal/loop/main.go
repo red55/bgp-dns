@@ -1,9 +1,7 @@
 package loop
 
 import (
-	//"context"
-	//"time"
-//	"github.com/red55/bgp-dns/internal/log"
+	"github.com/red55/bgp-dns/internal/log"
 )
 
 type loopOp struct {
@@ -13,35 +11,51 @@ type loopOp struct {
 
 type Loop struct {
 	opCh	chan *loopOp
+	l *log.Log
 }
 
 func NewLoop(bufSize int) Loop {
+	l := log.NewLog(log.L(), "loop")
 	return Loop{
-		opCh: make(chan *loopOp, bufSize),
+		opCh: make(chan *loopOp, bufSize), //, bufSize
+		l: &l,
 	}
 }
-func (l *Loop) Chan() chan *loopOp{
+func (l *Loop) ChanOp() chan *loopOp{
+	l.l.L().Trace().Msgf("Channel len: %d", len(l.opCh))
 	return l.opCh
 }
 
 func (l *Loop) Operation(f func () error, ret bool) (e error) {
-	//log.L().Trace().Caller(1).Msg("-> loop.Operation")
+	//const s1 = 1
+	//const s2 = 2
+
+	// l.l.L().Trace().Caller(s1).Msg("--> loop.Operation")
+	//defer l.l.L().Trace().Caller(s1).Msg("<-- loop.Operation")
+
 	var ec chan error
+
 	if ret {
 		ec = make(chan error)
+		defer close(ec)
 	}
-	defer func() {
-		if nil != ec {
-			//log.L().Trace().Caller(2).Msg("-- loop.Read return")
-			e = <-ec
-		}
 
-		//log.L().Trace().Caller(2).Msg("<- loop.Operation")
+	defer func() {
+	//	l.l.L().Trace().Caller(s2).Msg("-> loop.Read result")
+	//	defer l.l.L().Trace().Caller(s2).Msg("<- loop.Read result")
+		if nil != ec {
+	//		l.l.L().Trace().Caller(s2).Msg("-> loop.Read error")
+			e = <-ec
+	//		l.l.L().Trace().Caller(s2).Msg("<- loop.Read error")
+		}
 	}()
-	l.Chan() <- &loopOp{
+
+	//l.l.L().Trace().Caller(s1).Msg("-> loop.Invoke")
+	l.ChanOp() <- &loopOp{
 		f:     f,
 		errCh: ec,
 	}
+	//l.l.L().Trace().Caller(s1).Msg("<- loop.Invoke")
 	return
 }
 func (l *Loop) NoErr(o *loopOp) {
@@ -58,9 +72,9 @@ func (l *Loop) NoOp(o *loopOp) {
 	}
 }
 func (l *Loop) HandleOp(o *loopOp) {
-	if nil != o.errCh {
-		o.errCh <- o.f()
-	} else {
+	if nil == o.errCh {
 		_ = o.f()
+	} else {
+		o.errCh <- o.f()
 	}
 }
