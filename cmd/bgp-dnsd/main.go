@@ -2,11 +2,13 @@ package main
 import (
     "context"
     "errors"
+    "fmt"
     "github.com/red55/bgp-dns/internal/bgp"
     "github.com/red55/bgp-dns/internal/config"
     "github.com/red55/bgp-dns/internal/dns"
     "github.com/red55/bgp-dns/internal/fswatcher"
     "github.com/red55/bgp-dns/internal/log"
+    "github.com/rs/zerolog"
     "github.com/spf13/pflag"
     "os"
     "os/signal"
@@ -22,6 +24,23 @@ var (
     commit  = "none"
     date    = "unknown"
 )
+
+func (a *app) stdErr(e error, s string,  v ...interface{}) {
+    s = fmt.Sprintf(s, v...)
+    a.L().Error().Err(e).Msgf(s, v...)
+    if a.L().GetLevel() > zerolog.ErrorLevel {
+        _, _ = fmt.Fprintf(os.Stderr, "%s - %v\n", s, e)
+    }
+
+}
+
+func (a *app) stdOut(s string,  v ...interface{}) {
+    s = fmt.Sprintf(s, v...)
+    a.L().Info().Msgf(s, v...)
+    if a.L().GetLevel() > zerolog.InfoLevel {
+        _, _ = fmt.Fprintf(os.Stdout, "%s\n", s)
+    }
+}
 
 func main() {
     pflag.StringP("config", "c", "appsettings.yml", "Path to configuration file.")
@@ -42,9 +61,9 @@ func main() {
         Log: log.NewLog(log.L(), ""),
     }
 
-    _app.L().Info().Msgf("Starting up %s (%s) built on %s...", version, commit, date )
+    _app.stdOut("Starting up %s (%s) built on %s...", version, commit, date )
     defer func () {
-        _app.L().Info().Msg("Shutdown complete.")
+        _app.stdOut("Shutdown complete.")
     }()
 
     ctx := context.Background()
@@ -60,7 +79,7 @@ func main() {
     }
     defer func() {
         if e = bgp.Shutdown(ctx); e != nil {
-            _app.L().Err(e)
+            _app.stdErr(e, "BGP Shutdown failed ")
         }
     }()
 
@@ -69,7 +88,7 @@ func main() {
     }
     defer func() {
         if e = dns.Shutdown(ctx); e != nil {
-            _app.L().Err(e)
+            _app.stdErr(e, "DNS Shutdown failed ")
         }
     }()
 
@@ -82,18 +101,18 @@ func main() {
     }
     defer func() {
         if e = fswatcher.Shutdown(ctx); e != nil {
-            _app.L().Err(e)
+            _app.stdErr(e, "FSWatcher Shutdown failed ")
         }
     }()
 
-    _app.L().Info().Msg("Startup complete.")
+    _app.stdOut("Startup complete.")
     select {
     case <-c :
-        _app.L().Info().Msg("Gracefully shutting down...")
+        _app.stdOut("Gracefully shutting down...")
         break
     case <-ctx.Done():
         if ctx.Err() != nil {
-            _app.L().Err(ctx.Err())
+            _app.stdErr(e, "Ctrl+C failed ")
         }
     }
 }
