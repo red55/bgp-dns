@@ -94,7 +94,7 @@ func (s *bgpSrv) remove(prefix *bgpapi.IPAddressPrefix, asn uint32) error {
 	}
 
 	found, _ := s.find([]*bgpapi.IPAddressPrefix{prefix})
-	s.L().Info().Msgf("Removing prefix: %s, found: %b", prefix.String(), found != nil)
+	s.L().Info().Msgf("Removing prefix: %s, found: %t", prefix.String(), found != nil)
 
 	if found != nil {
 		e := s.bgp.DeletePath(context.Background(), &bgpapi.DeletePathRequest{
