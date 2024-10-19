@@ -51,7 +51,7 @@ func (c *cache) loop(ctx context.Context) {
 			sleepUntil = now.Add(cfg.Dns.Cache.MinTtl * time.Second)
 		}
 
-		c.L().Info().Msgf("DSN Refresher will sleep until %s for %d seconds", sleepUntil.Format(time.RFC3339),
+		c.L().Info().Msgf("DNS Refresher will sleep until %s for %d seconds", sleepUntil.Format(time.RFC3339),
 			sleepUntil.Sub(now) / time.Second)
 		timeout, cancelTimeout := context.WithDeadline(ctx, sleepUntil)
 

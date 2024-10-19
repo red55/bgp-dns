@@ -43,7 +43,7 @@ func Serve(ctx context.Context) error {
 
 		dns.HandleFunc(".", _resolvers.proxyQuery)
 		if e := _server.ListenAndServe(); e != nil {
-			log.L().Fatal().Str("m", "dns").Err(e).Msg("Failed to bind DSN resolver")
+			log.L().Fatal().Str("m", "dns").Err(e).Msg("Failed to bind DNS resolver")
 		}
 	}(ctx)
 
