@@ -17,7 +17,8 @@ before:
     - go generate ./...
 
 builds:
-  - main: ./cmd/bgp-dnsd
+  - id: bgp-dnsd
+    main: ./cmd/bgp-dnsd
     binary: bgp-dnsd
     env:
       - CGO_ENABLED=0
@@ -25,7 +26,8 @@ builds:
       - linux
     goarch:
       - amd64
-  - main: ./cmd/bgp-dnsctl
+  - id: bgp-dnsctl
+    main: ./cmd/bgp-dnsctl
     binary: bgp-dnsctl
     env:
       - CGO_ENABLED=0
