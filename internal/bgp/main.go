@@ -18,15 +18,13 @@ type bgpSrv struct {
 	bgp *bgpsrv.BgpServer
 	//ipRefCounter  *hashmap.Map[string, *atomic.Uint64]
 	ipRefCounter map[string]*atomic.Uint64
-	cancel context.CancelFunc
-	wg sync.WaitGroup
-	asn uint32
-	id net.IP
+	cancel       context.CancelFunc
+	wg           sync.WaitGroup
+	asn          uint32
+	id           net.IP
 }
 
-
 var (
-
 	_bgp *bgpSrv
 
 	_v4Family = &bgpapi.Family{
@@ -38,15 +36,15 @@ var (
 func Serve(ctx context.Context) (e error) {
 	cfg := ctx.Value("cfg").(*config.AppCfg)
 	_bgp = &bgpSrv{
-		Loop:         loop.NewLoop(1),
-		Log: log.NewLog(log.L(), "bgp"),
-		bgp:          bgpsrv.NewBgpServer(bgpsrv.LoggerOption(newZeroLogger(cfg.Log.Level))),
+		Loop: loop.NewLoop(1),
+		Log:  log.NewLog(log.L(), "bgp"),
+		bgp:  bgpsrv.NewBgpServer(bgpsrv.LoggerOption(newZeroLogger(cfg.Log.Level))),
 		//ipRefCounter: hashmap.New[string, *atomic.Uint64](),
 		ipRefCounter: make(map[string]*atomic.Uint64),
-		asn: cfg.Bgp.Asn,
-		id: cfg.Bgp.Id,
+		asn:          cfg.Bgp.Asn,
+		id:           cfg.Bgp.Id,
 	}
-	go func () {
+	go func() {
 		_bgp.bgp.Serve()
 	}()
 
@@ -84,7 +82,7 @@ func Serve(ctx context.Context) (e error) {
 			Peer: &bgpapi.Peer{
 				ApplyPolicy: pol,
 				Conf: &bgpapi.PeerConf{
-					NeighborAddress: peer.Addr.IP.String(),
+					NeighborAddress: peer.Address.IP.String(),
 					PeerAsn:         peer.Asn,
 				},
 				EbgpMultihop: &bgpapi.EbgpMultihop{
@@ -115,9 +113,9 @@ func Serve(ctx context.Context) (e error) {
 					},
 				},
 			},
-			}); e != nil {
-				_bgp.L().Fatal().Err(e).Msgf("Failed to add peer %s", peer.Addr.String())
-			}
+		}); e != nil {
+			_bgp.L().Fatal().Err(e).Msgf("Failed to add peer %s", peer.Address.String())
+		}
 	}
 
 	go _bgp.loop(ctx)
@@ -125,7 +123,7 @@ func Serve(ctx context.Context) (e error) {
 	return nil
 }
 func Shutdown(ctx context.Context) (e error) {
-	if e = _bgp.bgp.StopBgp(ctx,  &bgpapi.StopBgpRequest{}); e != nil {
+	if e = _bgp.bgp.StopBgp(ctx, &bgpapi.StopBgpRequest{}); e != nil {
 		_bgp.L().Panic().Err(e).Msg("Failed to shutdown BGP instance")
 	}
 	_bgp.cancel()
@@ -135,7 +133,7 @@ func Shutdown(ctx context.Context) (e error) {
 }
 
 func Advance(ips []string) error {
-	return _bgp.Operation(func () (e error) {
+	return _bgp.Operation(func() (e error) {
 		for _, ip := range ips {
 			counter := new(atomic.Uint64)
 			_bgp.L().Trace().Msgf("Before GetOrInsert: %s", ip)
@@ -147,7 +145,7 @@ func Advance(ips []string) error {
 			}
 			_bgp.L().Trace().Msgf("After GetOrInsert: %s, %v, %t", ip, refs, ok)
 			c := refs.Add(1)
-			if  c == 1 {
+			if c == 1 {
 				_bgp.L().Debug().Msgf("Advance IPs: %s", ip)
 				prefix := &bgpapi.IPAddressPrefix{
 					PrefixLen: 32,
@@ -163,7 +161,7 @@ func Advance(ips []string) error {
 }
 
 func Withdraw(ips []string) error {
-	return _bgp.Operation( func () (e error) {
+	return _bgp.Operation(func() (e error) {
 		_bgp.L().Trace().Msgf("-> Withdraw")
 		defer _bgp.L().Trace().Msgf("<- Withdraw")
 		for _, ip := range ips {
@@ -174,13 +172,13 @@ func Withdraw(ips []string) error {
 					prefix := &bgpapi.IPAddressPrefix{
 						PrefixLen: 32,
 						Prefix:    ip,
-						}
-						if e = _bgp.remove(prefix, _bgp.asn); e != nil {
-							_bgp.L().Error().Err(e)
-						}
-						_bgp.L().Trace().Msg("Before map delete")
-						delete(_bgp.ipRefCounter, ip)
-						_bgp.L().Trace().Msg("After map delete")
+					}
+					if e = _bgp.remove(prefix, _bgp.asn); e != nil {
+						_bgp.L().Error().Err(e)
+					}
+					_bgp.L().Trace().Msg("Before map delete")
+					delete(_bgp.ipRefCounter, ip)
+					_bgp.L().Trace().Msg("After map delete")
 				} else {
 					_bgp.L().Debug().Msgf("No need to change BGP, %v(%d)", ip, c)
 				}

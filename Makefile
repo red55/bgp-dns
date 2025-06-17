@@ -1,7 +1,17 @@
-all: bgp-dns
+all: bgp-dnsd bgp-dnsctl
 
-bgp-dns: clean
+pb:
+	$(pushd proto && buf generate --clean || popd)
+
+
+bgp-dnsd: clean pb
 	go build -o ./bgp-dnsd cmd/bgp-dnsd/main.go
 
+bgp-dnsctl: clean pb
+	go build -o ./bgp-dnsctl cmd/bgp-dnsctl/main.go
+
 clean:
-	rm -f ./bgp-dnsd
+	rm -f ./bgp-dns*
+
+clean_bp:
+	rm -f ./api/*.pb.go

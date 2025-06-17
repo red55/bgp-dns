@@ -4,25 +4,26 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/miekg/dns"
 	"github.com/red55/bgp-dns/internal/config"
 	"github.com/red55/bgp-dns/internal/log"
-	"sync"
-	"time"
 )
 
 var (
-	_server *dns.Server
-	_wg     sync.WaitGroup
+	_server    *dns.Server
+	_wg        sync.WaitGroup
 	_resolvers *resolvers
-	_cancel context.CancelFunc
-	_cache *cache
+	_cancel    context.CancelFunc
+	_cache     *cache
 
-	EInvalidFQDN = errors.New("invalid FQDN")
-	ENotInitialized = errors.New("cache subsystemd is not initialized")
+	EInvalidFQDN    = errors.New("invalid FQDN")
+	ENotInitialized = errors.New("cache subsystem is not initialized")
 )
 
-func Serve(ctx context.Context) error {
+func Serve(ctx context.Context) (e error) {
 	var cfg = ctx.Value("cfg").(*config.AppCfg)
 
 	if nil != _cancel {
@@ -31,6 +32,8 @@ func Serve(ctx context.Context) error {
 	ctx, _cancel = context.WithCancel(ctx)
 
 	_resolvers = newResolvers(cfg.Dns.Resolvers)
+	_cache = newCache(cfg.Dns.Cache.MaxEntries, cfg.Dns.Cache.MinTtl, newResolvers(cfg.Dns.List.Resolvers), log.L())
+	e = _cache.serve(ctx)
 
 	go func(c context.Context) {
 		_server = &dns.Server{
@@ -42,20 +45,18 @@ func Serve(ctx context.Context) error {
 		defer _wg.Done()
 
 		dns.HandleFunc(".", _resolvers.proxyQuery)
-		if e := _server.ListenAndServe(); e != nil {
-			log.L().Fatal().Str("m", "dns").Err(e).Msg("Failed to bind DNS resolver")
+		if err := _server.ListenAndServe(); err != nil {
+			log.L().Fatal().Str("m", "dns").Err(err).Msg("Failed to bind DNS resolver")
 		}
 	}(ctx)
 
-	_cache = newCache(cfg.Dns.Cache.MaxEntries, cfg.Dns.Cache.MinTtl, newResolvers(cfg.Dns.List.Resolvers), log.L())
-
-	return _cache.serve(ctx)
+	return e
 }
 
 func Shutdown(ctx context.Context) error {
 	dns.HandleRemove(".")
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer func () {
+	defer func() {
 		cancel()
 	}()
 
@@ -94,4 +95,12 @@ func Load(fn string) error {
 		return ENotInitialized
 	}
 	return _cache.load(fn)
+}
+
+func DumpCache(callback func(fqdn string, ips []string, ttl time.Duration, expiration time.Time, gen uint64) error) error {
+	if _cache == nil {
+		return ENotInitialized
+	}
+
+	return _cache.dump(callback)
 }

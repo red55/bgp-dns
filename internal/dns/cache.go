@@ -5,6 +5,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/beevik/prefixtree/v2"
 	"github.com/bluele/gcache"
 	"github.com/miekg/dns"
@@ -13,11 +19,6 @@ import (
 	"github.com/red55/bgp-dns/internal/loop"
 	"github.com/red55/bgp-dns/internal/utils"
 	"github.com/rs/zerolog"
-	"os"
-	"strings"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 type entries *prefixtree.Tree[cacheEntry]
@@ -25,21 +26,21 @@ type entries *prefixtree.Tree[cacheEntry]
 type cache struct {
 	loop.Loop
 	log.Log
-	m sync.RWMutex
-	wg sync.WaitGroup
-	pref entries
+	m       sync.RWMutex
+	wg      sync.WaitGroup
+	pref    entries
 	entries gcache.Cache
-	cancel context.CancelFunc
-	rs *resolvers
-	minTtl time.Duration
-	gen 	atomic.Uint64
+	cancel  context.CancelFunc
+	rs      *resolvers
+	minTtl  time.Duration
+	gen     atomic.Uint64
 }
 
 func newCache(max int, minTtl time.Duration, rs *resolvers, l *zerolog.Logger) (r *cache) {
 	r = &cache{
-		Loop: loop.NewLoop(1),
-		Log: log.NewLog(l, "dns"),
-		pref: prefixtree.New[cacheEntry](),
+		Loop:   loop.NewLoop(1),
+		Log:    log.NewLog(l, "dns"),
+		pref:   prefixtree.New[cacheEntry](),
 		cancel: nil,
 		rs:     rs,
 		minTtl: minTtl,
@@ -61,10 +62,9 @@ func (c *cache) generation() uint64 {
 	return (&c.gen).Load()
 }
 
-func (c *cache) increaseGeneration () uint64 {
+func (c *cache) increaseGeneration() uint64 {
 	return (&c.gen).Add(1)
 }
-
 
 func (c *cache) serve(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
@@ -99,7 +99,7 @@ func (c *cache) upsert(fqdn string, answer *dns.Msg) error {
 		ce = t.(*cacheEntry)
 	}
 	var gen = c.generation()
-	var prevIps [] string
+	var prevIps []string
 	if ce == nil {
 		ce = newCacheEntry(answer, c.minTtl, gen)
 	} else {
@@ -124,11 +124,11 @@ func (c *cache) upsert(fqdn string, answer *dns.Msg) error {
 
 }
 
-func (c* cache) findKeysByGeneration(gen uint64) []string {
+func (c *cache) findKeysByGeneration(gen uint64) []string {
 	// GetALL returns a map with a copy of cache contents
 	all := c.entries.GetALL(true)
-	r := make([]string, 0, len(all) / 2)
-	for k,v := range all {
+	r := make([]string, 0, len(all)/2)
+	for k, v := range all {
 		ce := v.(*cacheEntry)
 		ceGen := (&ce.gen).Load()
 		if ceGen <= gen {
@@ -139,17 +139,17 @@ func (c* cache) findKeysByGeneration(gen uint64) []string {
 	return r
 }
 
-func (c *cache) has(k string) bool{
+func (c *cache) has(k string) bool {
 	return c.entries.Has(k)
 }
 
-func (c* cache) register(fqdn string) error {
-	if len (fqdn) < 2 {
+func (c *cache) register(fqdn string) error {
+	if len(fqdn) < 2 {
 		return fmt.Errorf("'%s'. %w", fqdn, EInvalidFQDN)
 	}
 	cn := dns.CanonicalName(fqdn)
-	dns.HandleFunc(dns.CanonicalName(fqdn), func (rw dns.ResponseWriter, m* dns.Msg) {
-		c.resolve (rw, m, true)
+	dns.HandleFunc(dns.CanonicalName(fqdn), func(rw dns.ResponseWriter, m *dns.Msg) {
+		c.resolve(rw, m, true)
 	})
 
 	q := new(dns.Msg)
@@ -160,15 +160,15 @@ func (c* cache) register(fqdn string) error {
 	return nil
 }
 
-func (c*cache) unregister(fqdn string) error {
-	if len (fqdn) < 2 {
+func (c *cache) unregister(fqdn string) error {
+	if len(fqdn) < 2 {
 		return fmt.Errorf("'%s'. %w", fqdn, EInvalidFQDN)
 	}
 	cn := dns.CanonicalName(fqdn)
 	c.L().Debug().Msgf("Unregistering %s", cn)
 	dns.HandleRemove(cn)
 
-	var kr [] string
+	var kr []string
 	for _, k := range c.entries.Keys(true) {
 		s := k.(string)
 		if strings.HasSuffix(s, cn) {
@@ -178,13 +178,13 @@ func (c*cache) unregister(fqdn string) error {
 
 	for _, k := range kr {
 		c.L().Trace().Msgf("Removing cache entry %s", k)
-		_ = c.entries.Remove(k);
+		_ = c.entries.Remove(k)
 	}
 
 	return nil
 }
 
-func (c* cache) load(fn string) error {
+func (c *cache) load(fn string) error {
 	f, e := os.Open(fn)
 	if e != nil {
 		return e
@@ -205,7 +205,7 @@ func (c* cache) load(fn string) error {
 		if len(fqdn) == 0 {
 			continue
 		}
-		if fqdn[0] == '#' || fqdn[0] == ';'{
+		if fqdn[0] == '#' || fqdn[0] == ';' {
 			continue
 		}
 		if e = c.register(fqdn); e != nil {
@@ -214,7 +214,7 @@ func (c* cache) load(fn string) error {
 
 	}
 
-	return c.evictByGeneration(oldGeneration);
+	return c.evictByGeneration(oldGeneration)
 }
 
 func (c *cache) evictByGeneration(gen uint64) error {
@@ -223,7 +223,7 @@ func (c *cache) evictByGeneration(gen uint64) error {
 	keys := c.findKeysByGeneration(gen)
 
 	for _, k := range keys {
-		if e := c.unregister(k); e != nil{
+		if e := c.unregister(k); e != nil {
 			c.L().Error().Err(e).Msgf("Failed to unregister by generation")
 		}
 	}
@@ -232,8 +232,23 @@ func (c *cache) evictByGeneration(gen uint64) error {
 }
 
 func (c *cache) notfiyChanged(cn string) {
-	c.Operation(func () error {
+	c.Operation(func() error {
 		c.L().Debug().Msgf("Signaling cache changed for %s", cn)
 		return nil
 	}, false)
+}
+
+func (c *cache) dump(callback func(fqdn string, ips []string, ttl time.Duration, expiration time.Time, gen uint64) error) error {
+	if callback == nil {
+		return errors.New("callback function is nil")
+	}
+
+	all := c.entries.GetALL(true)
+	for k, v := range all {
+		ce := v.(*cacheEntry)
+		if e := callback(k.(string), ce.Ip4s(), ce.ttl, ce.expiration, ce.gen.Load()); e != nil {
+			return e
+		}
+	}
+	return nil
 }
