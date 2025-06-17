@@ -30,7 +30,7 @@ func NewRootCmd(_app *app.Application) *cobra.Command {
 			client = api.NewBgpDnsServiceClient(conn)
 			cleanup = func() {
 				if err := conn.Close(); err != nil {
-					_app.L().Fatal().Msgf("Failed to close connection %e", err)
+					_app.L().Fatal().Msgf("Failed to close connection %s", err)
 				}
 			}
 			return nil
