@@ -2,15 +2,15 @@ package log
 
 import (
 	"fmt"
-	"github.com/red55/bgp-dns/internal/config"
-	"github.com/rs/zerolog"
 	"os"
 	"sync/atomic"
 	"time"
+
+	"github.com/rs/zerolog"
 )
 
 type Log struct {
-	l atomic.Pointer[zerolog.Logger]
+	l   atomic.Pointer[zerolog.Logger]
 	lvl atomic.Value
 }
 
@@ -20,7 +20,7 @@ func (l *Log) setLogger(log *zerolog.Logger) {
 
 func (l *Log) L() *zerolog.Logger {
 	r := l.l.Load()
-	return r;
+	return r
 }
 
 func (l *Log) SetLevel(lvl zerolog.Level) {
@@ -31,6 +31,7 @@ func (l *Log) SetLevel(lvl zerolog.Level) {
 func (l *Log) Level() zerolog.Level {
 	return l.lvl.Load().(zerolog.Level)
 }
+
 var (
 	_logger Log
 )
@@ -46,9 +47,10 @@ func NewLog(l *zerolog.Logger, moduleName string) (r Log) {
 
 	return
 }
-func Init(cfg *config.AppCfg) {
+
+func Init(level zerolog.Level) {
 	l := zerolog.New(zerolog.ConsoleWriter{
-		Out: os.Stdout,
+		Out:        os.Stdout,
 		TimeFormat: time.RFC3339,
 		PartsOrder: []string{
 			zerolog.TimestampFieldName,
@@ -57,13 +59,13 @@ func Init(cfg *config.AppCfg) {
 			zerolog.CallerFieldName,
 			zerolog.MessageFieldName,
 		},
-		FieldsExclude: []string {
+		FieldsExclude: []string{
 			"m",
 		},
-	}).Level(cfg.Log.Level).With().Timestamp().Logger()
+	}).Level(level).With().Timestamp().Logger()
 	_logger.setLogger(&l)
 }
-func L()* zerolog.Logger {
+
+func L() *zerolog.Logger {
 	return _logger.L()
 }
-

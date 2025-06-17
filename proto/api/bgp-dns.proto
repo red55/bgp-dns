@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package api;
+import "google/protobuf/empty.proto";
+option go_package = "github.com/red55/bgp-dns/api;api";
+
+service BgpDnsService {
+  rpc ListCacheEntries(google.protobuf.Empty) returns (stream ListCacheEntriesResponse);
+}
+
+message ListCacheEntriesRequest {
+  // No fields needed for this request
+}
+
+message ListCacheEntriesResponse {
+  string type = 1;
+  string fqdn = 2;
+  repeated string addr = 3;
+  string generation = 4;
+  int64 ttl = 5;
+  int64 expiration = 6;
+}

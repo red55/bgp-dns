@@ -25,7 +25,14 @@ builds:
       - linux
     goarch:
       - amd64
-
+  - main: ./cmd/bgp-dnsctl
+    binary: bgp-dnsctl
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
 archives:
   - format: tar.gz
     # this name template makes the OS and Arch compatible with the results of `uname`.
