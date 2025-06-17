@@ -33,7 +33,7 @@ func Serve(_app *app.Application) (e error) {
 		target = strings.TrimPrefix(_app.Flags.Target, "unix://")
 		proto = "unix"
 		if _, e = os.Stat(target); !os.IsNotExist(e) {
-			if err := os.Remove(target); err != nil {
+			if e := os.Remove(target); e != nil {
 				_app.L().Fatal().Err(e)
 				return e
 			}
