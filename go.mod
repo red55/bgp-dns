@@ -7,7 +7,6 @@ require (
 	github.com/bluele/gcache v0.0.2
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/miekg/dns v1.1.66
-	github.com/mitchellh/mapstructure v1.5.0
 	github.com/osrg/gobgp/v3 v3.37.0
 	github.com/rs/zerolog v1.34.0
 	github.com/sourcegraph/conc v0.3.0

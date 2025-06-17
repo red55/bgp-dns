@@ -231,7 +231,7 @@ func (c *cache) evictByGeneration(gen uint64) error {
 	return nil
 }
 
-func (c *cache) notfiyChanged(cn string) {
+func (c *cache) notifyChanged(cn string) {
 	c.Operation(func() error {
 		c.L().Debug().Msgf("Signaling cache changed for %s", cn)
 		return nil
