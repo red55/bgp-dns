@@ -10,10 +10,10 @@ import (
 	"github.com/rs/zerolog"
 )
 
-const defaultTarget = "unix:///run/bgp-dns.sock"
+const svcName = "bgp-dnsd"
+const defaultTarget = "unix:///run/" + svcName + "/" + svcName + ".sock"
 const TargetDescription = "BGP DNS Service socket/URI. Unix sockets should be prefixed with 'unix://'. " +
-	"Defaults to 'unix:///run/users/$UID/bgp-dns.sock' in case of user " +
-	"and to unix:///run/bgp-dns.sock in case of running under root."
+	"Defaults to " + defaultTarget + "."
 
 type GlobalFlags struct {
 	Target string
@@ -25,19 +25,19 @@ type Application struct {
 }
 
 func DefaultTarget() string {
-	var uid = "0"
-	if u, _ := user.Current(); u != nil {
-		uid = u.Uid
-	}
+
 	var target = defaultTarget
-	if uid == "0" {
-		target = "unix:///var/run/bgp-dnsd.sock"
-	} else {
+	if _, err := os.Stat(filepath.Dir(target)); os.IsNotExist(err) {
+		var uid = "0"
+		if u, _ := user.Current(); u != nil {
+			uid = u.Uid
+		}
 		target = "unix://" + filepath.Join("/run", "user", uid, "bgp-dnsd.sock")
 	}
 
 	return target
 }
+
 func New(module string, defaultLogLevel zerolog.Level) *Application {
 	log.Init(defaultLogLevel)
 	return &Application{
