@@ -32,7 +32,7 @@ func DefaultTarget() string {
 		if u, _ := user.Current(); u != nil {
 			uid = u.Uid
 		}
-		target = "unix://" + filepath.Join("/run", "user", uid, "bgp-dnsd.sock")
+		target = "unix://" + filepath.Join("/run", "user", uid, svcName+".sock")
 	}
 
 	return target
