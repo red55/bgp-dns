@@ -148,7 +148,7 @@ func (c *cache) register(fqdn string) error {
 		return fmt.Errorf("'%s'. %w", fqdn, EInvalidFQDN)
 	}
 	cn := dns.CanonicalName(fqdn)
-	dns.HandleFunc(dns.CanonicalName(fqdn), func(rw dns.ResponseWriter, m *dns.Msg) {
+	dns.HandleFunc(cn, func(rw dns.ResponseWriter, m *dns.Msg) {
 		c.resolve(rw, m, true)
 	})
 
