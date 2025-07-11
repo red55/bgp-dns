@@ -5,7 +5,7 @@ import (
 	"slices"
 )
 
-func (c *cache) resolve(w dns.ResponseWriter, q *dns.Msg, notfiyChanged bool) {
+func (c *cache) resolve(w dns.ResponseWriter, q *dns.Msg, notifyChanged bool) {
 	var a *dns.Msg
 	var e error
 
@@ -31,7 +31,7 @@ func (c *cache) resolve(w dns.ResponseWriter, q *dns.Msg, notfiyChanged bool) {
 			c.L().Warn().Err(e)
 			return
 		}
-		if notfiyChanged {
+		if notifyChanged {
 			c.notifyChanged(qn)
 		}
 
@@ -42,7 +42,7 @@ func (c *cache) resolve(w dns.ResponseWriter, q *dns.Msg, notfiyChanged bool) {
 				c.L().Error().Err(e).Msgf("Failed to unregister %s from resolve", qn)
 				return
 			}
-			if notfiyChanged {
+			if notifyChanged {
 				c.notifyChanged(qn)
 			}
 		} else {
