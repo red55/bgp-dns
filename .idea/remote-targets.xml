@@ -4,7 +4,7 @@
     <targets>
       <target name="WSL - Ubuntu" type="wsl" uuid="9d5f70f4-642a-42fb-9765-8f9f84fcb726">
         <config>
-          <option name="distributionMsId" value="Ubuntu" />
+          <option name="distributionMsId" value="Ubuntu-24.04" />
           <option name="projectRootOnTarget" value="{exitCode=1, timeout=false, cancelled=false, stdout=pwd: couldn't find directory entry in ‘..’ with matching i-node&#10;, stderr=}/bgp-dnsd" />
         </config>
         <ContributedStateBase type="GoLanguageRuntime">

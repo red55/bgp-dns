@@ -3,13 +3,12 @@ package main
 import (
 	"context"
 	"errors"
-	"os"
-	"os/signal"
-	"path/filepath"
-
 	"github.com/red55/bgp-dns/cmd/bgp-dnsd/cli"
 	"github.com/red55/bgp-dns/cmd/bgp-dnsd/commands"
 	"github.com/rs/zerolog"
+	"os"
+	"os/signal"
+	"path/filepath"
 
 	"github.com/red55/bgp-dns/internal/app"
 	"github.com/red55/bgp-dns/internal/bgp"

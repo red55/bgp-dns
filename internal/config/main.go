@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/rs/zerolog"
@@ -52,6 +53,9 @@ func Init(path string) (*AppCfg, error) {
 	if err = viper.Unmarshal(cfg, viper.DecodeHook(decodeHook)); err != nil {
 		return nil, fmt.Errorf("error loading config file into memory, %w", err)
 	}
+	var listFile string
+	listFile, _ = filepath.Abs(cfg.Dns.List.File)
+	cfg.Dns.List.File = strings.ReplaceAll(listFile, "\\", string(os.PathSeparator))
 
 	return cfg, nil
 }
