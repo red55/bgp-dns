@@ -36,15 +36,12 @@ func (c *cache) resolve(w dns.ResponseWriter, q *dns.Msg, notifyChanged bool) {
 		}
 
 	} else {
-		c.L().Trace().Msgf("Empty Answer for %s, RCode: %d", qn, a.Rcode)
-		if c.has(qn) {
-			if e = c.unregister(qn); e != nil {
-				c.L().Error().Err(e).Msgf("Failed to unregister %s from resolve", qn)
-				return
-			}
-			if notifyChanged {
-				c.notifyChanged(qn)
-			}
+		c.L().Trace().Msgf("Not an A Answer for %s, RCode: %d", qn, a.Rcode)
+
+		ce := c.get(qn)
+		if ce != nil {
+			c.L().Trace().Msgf("Increasing falure count for %s", qn)
+			ce.IncFailures()
 		} else {
 			c.L().Trace().Msgf("%s not in cache, ignore...", qn)
 		}
