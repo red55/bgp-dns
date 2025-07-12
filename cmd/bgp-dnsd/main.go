@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/red55/bgp-dns/cmd/bgp-dnsd/cli"
 	"github.com/red55/bgp-dns/cmd/bgp-dnsd/commands"
+	"github.com/red55/bgp-dns/internal/log"
 	"github.com/rs/zerolog"
 	"os"
 	"os/signal"
@@ -38,6 +39,7 @@ func main() {
 		panic(e)
 	}
 	_app.SetLevel(cfg.Log.Level)
+	log.SetLevel(cfg.Log.Level)
 
 	defer func() {
 		_app.StdOut("Shutdown complete.")

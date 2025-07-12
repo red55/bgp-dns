@@ -69,3 +69,7 @@ func Init(level zerolog.Level) {
 func L() *zerolog.Logger {
 	return _logger.L()
 }
+
+func SetLevel(level zerolog.Level) {
+	_logger.SetLevel(level)
+}
