@@ -85,7 +85,7 @@ func (rs *resolvers) query(q *dns.Msg) (*dns.Msg, error) {
 			if len(a.Answer) > 0 {
 				rs.L().Trace().Msgf("Got answer %s", a.Answer[0].String())
 			} else {
-				rs.L().Warn().Msgf("Got answer %s", "'empty answer'")
+				rs.L().Warn().Msgf("%s: empty answer", q.Question[0].Name)
 			}
 			srv.ok()
 			return a, nil
