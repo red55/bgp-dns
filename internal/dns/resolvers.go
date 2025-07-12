@@ -141,7 +141,7 @@ func (rs *resolvers) proxyQuery(w dns.ResponseWriter, rq *dns.Msg) {
 	rs.L().Debug().Msgf("Proxying request %s(%d) from: %s", rq.Question[0].Name,
 		rq.Question[0].Qtype, w.RemoteAddr().String())
 
-	if r, e := rs.query(rq); e != nil {
+	if r, e := rs.query(rq); e != nil && !errors.Is(e, ErrEmptyAnswer) {
 		rs.L().Error().Msgf("Forwarding response to upstream responder failed %v", e)
 	} else {
 		if e = w.WriteMsg(r); e != nil {
