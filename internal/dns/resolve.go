@@ -40,7 +40,7 @@ func (c *cache) resolve(w dns.ResponseWriter, q *dns.Msg, notifyChanged bool) {
 
 		ce := c.get(qn)
 		if ce != nil {
-			c.L().Trace().Msgf("Increasing falure count for %s", qn)
+			c.L().Warn().Msgf("Increasing falure count for %s", qn)
 			ce.IncFailures()
 		} else {
 			c.L().Trace().Msgf("%s not in cache, ignore...", qn)
