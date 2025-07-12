@@ -1,20 +1,44 @@
 package dns
 
 import (
-    "container/ring"
-    "errors"
-    "fmt"
-    "github.com/miekg/dns"
-    "github.com/red55/bgp-dns/internal/log"
-    "github.com/sourcegraph/conc/iter"
-    "net"
-    "os"
-    "sync"
+	"container/ring"
+	"errors"
+	"fmt"
+	"github.com/miekg/dns"
+	"github.com/red55/bgp-dns/internal/log"
+	"github.com/sourcegraph/conc/iter"
+	"net"
+	"os"
+	"sync"
+	"sync/atomic"
 )
 
 type resolver struct {
 	addr *net.UDPAddr
-	ok   bool
+	okay atomic.Bool
+}
+
+func (r *resolver) fail() {
+	r.okay.Store(false)
+}
+
+func (r *resolver) ok() {
+	r.okay.Store(true)
+}
+func (r *resolver) isOk() bool {
+	return r.okay.Load()
+}
+
+func (r *resolver) String() string {
+	return fmt.Sprintf("%s (failed: %t)", r.addr.String(), r.isOk())
+}
+
+func newResolver(a *net.UDPAddr) (new *resolver) {
+	new = &resolver{
+		addr: a,
+	}
+	new.ok()
+	return new
 }
 
 type resolvers struct {
@@ -39,10 +63,7 @@ func (rs *resolvers) setResolvers(c []*net.UDPAddr) {
 	rs.rs = ring.New(l)
 
 	iter.ForEach(c, func(a **net.UDPAddr) {
-		rs.rs.Value = &resolver{
-            addr: *a,
-            ok:   true,
-        }
+		rs.rs.Value = newResolver(*a)
 		rs.rs = rs.rs.Next()
 	})
 }
@@ -61,11 +82,15 @@ func (rs *resolvers) query(q *dns.Msg) (*dns.Msg, error) {
 		rs.L().Debug().Msgf("Using DNS %v for %s", srv.addr, q.Question[0].Name)
 
 		if a, e := dns.Exchange(q, srv.addr.String()); e == nil {
-			rs.L().Trace().Msgf("Got answer %d", len(a.Answer))
-			srv.ok = true
+			if len(a.Answer) > 0 {
+				rs.L().Trace().Msgf("Got answer %s", a.Answer[0].String())
+			} else {
+				rs.L().Trace().Msgf("Got answer %s", "'empty answer'")
+			}
+			srv.ok()
 			return a, nil
 		} else {
-			srv.ok = false
+			srv.fail()
 			rs.L().Error().Err(e).Msgf("queryDns failed for %v", q.Question)
 
 			rs.rs = rs.rs.Next()
@@ -102,9 +127,6 @@ func (rs *resolvers) query(q *dns.Msg) (*dns.Msg, error) {
 	}
 }
 
-func (rs *resolvers) ResolveA(fqdn string) {
-
-}
 func (rs *resolvers) proxyQuery(w dns.ResponseWriter, rq *dns.Msg) {
 	rs.L().Debug().Msgf("Proxying request %s(%d) from: %s", rq.Question[0].Name, rq.Question[0].Qtype, w.RemoteAddr().String())
 
