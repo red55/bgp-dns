@@ -58,7 +58,7 @@ func (app *Application) Name() string {
 func (a *Application) StdErr(e error, format string, v ...interface{}) {
 	s := fmt.Sprintf(format, v...)
 	a.L().Error().Err(e).Msg(s)
-	if a.L().GetLevel() > zerolog.ErrorLevel {
+	if a.L().GetLevel() >= zerolog.ErrorLevel {
 		_, _ = fmt.Fprintf(os.Stderr, "%s - %v\n", s, e)
 	}
 
@@ -67,7 +67,7 @@ func (a *Application) StdErr(e error, format string, v ...interface{}) {
 func (a *Application) StdOut(format string, v ...interface{}) {
 	s := fmt.Sprintf(format, v...)
 	a.L().Info().Msg(s)
-	if a.L().GetLevel() > zerolog.InfoLevel {
+	if a.L().GetLevel() >= zerolog.InfoLevel {
 		_, _ = fmt.Fprintf(os.Stdout, "%s\n", s)
 	}
 }

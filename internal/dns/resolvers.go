@@ -85,7 +85,7 @@ func (rs *resolvers) query(q *dns.Msg) (*dns.Msg, error) {
 			if len(a.Answer) > 0 {
 				rs.L().Trace().Msgf("Got answer %s", a.Answer[0].String())
 			} else {
-				rs.L().Trace().Msgf("Got answer %s", "'empty answer'")
+				rs.L().Warn().Msgf("Got answer %s", "'empty answer'")
 			}
 			srv.ok()
 			return a, nil
@@ -128,7 +128,8 @@ func (rs *resolvers) query(q *dns.Msg) (*dns.Msg, error) {
 }
 
 func (rs *resolvers) proxyQuery(w dns.ResponseWriter, rq *dns.Msg) {
-	rs.L().Debug().Msgf("Proxying request %s(%d) from: %s", rq.Question[0].Name, rq.Question[0].Qtype, w.RemoteAddr().String())
+	rs.L().Debug().Msgf("Proxying request %s(%d) from: %s", rq.Question[0].Name,
+		rq.Question[0].Qtype, w.RemoteAddr().String())
 
 	if r, e := rs.query(rq); e != nil {
 		rs.L().Error().Msgf("Forwarding response to upstream responder failed %v", e)
