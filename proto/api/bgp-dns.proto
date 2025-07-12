@@ -19,4 +19,5 @@ message ListCacheEntriesResponse {
   string generation = 4;
   int64 ttl = 5;
   int64 expiration = 6;
+  uint64 fails = 7;
 }

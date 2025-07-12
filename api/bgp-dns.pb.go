@@ -66,6 +66,7 @@ type ListCacheEntriesResponse struct {
 	Generation    string                 `protobuf:"bytes,4,opt,name=generation,proto3" json:"generation,omitempty"`
 	Ttl           int64                  `protobuf:"varint,5,opt,name=ttl,proto3" json:"ttl,omitempty"`
 	Expiration    int64                  `protobuf:"varint,6,opt,name=expiration,proto3" json:"expiration,omitempty"`
+	Fails         uint64                 `protobuf:"varint,7,opt,name=fails,proto3" json:"fails,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -142,12 +143,19 @@ func (x *ListCacheEntriesResponse) GetExpiration() int64 {
 	return 0
 }
 
+func (x *ListCacheEntriesResponse) GetFails() uint64 {
+	if x != nil {
+		return x.Fails
+	}
+	return 0
+}
+
 var File_api_bgp_dns_proto protoreflect.FileDescriptor
 
 const file_api_bgp_dns_proto_rawDesc = "" +
 	"\n" +
 	"\x11api/bgp-dns.proto\x12\x03api\x1a\x1bgoogle/protobuf/empty.proto\"\x19\n" +
-	"\x17ListCacheEntriesRequest\"\xa8\x01\n" +
+	"\x17ListCacheEntriesRequest\"\xbe\x01\n" +
 	"\x18ListCacheEntriesResponse\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x12\n" +
 	"\x04fqdn\x18\x02 \x01(\tR\x04fqdn\x12\x12\n" +
@@ -158,7 +166,8 @@ const file_api_bgp_dns_proto_rawDesc = "" +
 	"\x03ttl\x18\x05 \x01(\x03R\x03ttl\x12\x1e\n" +
 	"\n" +
 	"expiration\x18\x06 \x01(\x03R\n" +
-	"expiration2\\\n" +
+	"expiration\x12\x14\n" +
+	"\x05fails\x18\a \x01(\x04R\x05fails2\\\n" +
 	"\rBgpDnsService\x12K\n" +
 	"\x10ListCacheEntries\x12\x16.google.protobuf.Empty\x1a\x1d.api.ListCacheEntriesResponse0\x01B\"Z github.com/red55/bgp-dns/api;apib\x06proto3"
 
