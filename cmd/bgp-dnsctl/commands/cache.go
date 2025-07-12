@@ -30,7 +30,12 @@ func newCacheCmd(_app *app.Application, client *api.BgpDnsServiceClient) *cobra.
 
 	return cmd
 }
-
+func emptyArr(arr []string) []string {
+	if len(arr) == 0 {
+		return []string{"None"}
+	}
+	return arr
+}
 func newCacheListCmd(_app *app.Application, client *api.BgpDnsServiceClient) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
@@ -55,7 +60,7 @@ func newCacheListCmd(_app *app.Application, client *api.BgpDnsServiceClient) *co
 				_app.L().Info().Msgf("fqdn:%s fails:%d addr:%s ttl:%d exp:%s gen:%s",
 					r.Fqdn,
 					r.Fails,
-					strings.Join(r.Addr, ","),
+					strings.Join(emptyArr(r.Addr), ","),
 					r.Ttl,
 					time.UnixMilli(r.Expiration).Format(time.RFC3339),
 					r.Generation)
