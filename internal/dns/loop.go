@@ -37,7 +37,7 @@ L:
 				c.L().Debug().Msgf("Resolving cached %s", k.(string))
 				// resolve will call cache.upsert on resolved IPs
 				c.resolve(nil, q, false)
-				c.L().Debug().Msgf("Resolved cached %s, ttl:%d, expire: %s",
+				c.L().Info().Msgf("Resolved cached %s, ttl:%d, expire: %s",
 					k.(string), ce.ttl, ce.expiration.Format(time.RFC3339))
 			}
 
