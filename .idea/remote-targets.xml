@@ -14,6 +14,20 @@
           </config>
         </ContributedStateBase>
       </target>
+      <target name="lsk@192.168.151.70:22" type="ssh/sftp" uuid="29f5d0cc-40b3-43e4-aa12-425e42d39a26">
+        <config>
+          <option name="projectRootOnTarget" value="/home/lsk/jetbrains/remote-dbg/bgp-dns" />
+          <option name="serverName" value="lsk@192.168.151.70:22 key" />
+          <option name="useRsync" value="true" />
+        </config>
+        <ContributedStateBase type="GoLanguageRuntime">
+          <config>
+            <option name="goPath" value="/home/lsk/go" />
+            <option name="goRoot" value="/usr/local/go/bin/go" />
+            <option name="goVersion" value="go1.24.4 linux/amd64" />
+          </config>
+        </ContributedStateBase>
+      </target>
     </targets>
   </component>
 </project>
