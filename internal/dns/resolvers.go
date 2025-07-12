@@ -92,9 +92,12 @@ func (rs *resolvers) query(q *dns.Msg) (*dns.Msg, error) {
 		} else {
 
 			if a != nil {
-				rs.L().Warn().Msgf("%s: We got answer using: %s, but it's empty so return it as is (%v)",
-					q.Question[0].Name, srv.addr.String(), q.Rcode)
-				return a, e
+				rs.L().Warn().Msgf("%s: We got answer using: %s, but it's empty so return it as is (%s)",
+					q.Question[0].Name, srv.addr.String(), dns.RcodeToString[a.Rcode])
+
+				if a.Rcode != dns.RcodeSuccess {
+					return a, e
+				}
 			}
 
 			srv.fail()
@@ -103,10 +106,6 @@ func (rs *resolvers) query(q *dns.Msg) (*dns.Msg, error) {
 					rs.L().Warn().Msgf("%s: AAAA empty answer, using: %s", q.Question[0].Name, srv.addr.String())
 				} else {
 					rs.L().Warn().Msgf("%s: empty answer, using: %s", q.Question[0].Name, srv.addr.String())
-				}
-				if q.Question[0].Qtype == dns.TypeAAAA || q.Question[0].Qtype == dns.TypeA {
-					e = errors.Join(ErrEmptyAnswer, fmt.Errorf("empty answer from %s for %s", srv.addr.String(),
-						q.Question[0].Name))
 				}
 			} else {
 				rs.L().Error().Err(e).Msgf("queryDns failed for %v", q.Question)
