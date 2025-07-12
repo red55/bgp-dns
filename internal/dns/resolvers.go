@@ -8,7 +8,7 @@ import (
 	"github.com/red55/bgp-dns/internal/log"
 	"github.com/sourcegraph/conc/iter"
 	"net"
-	"os"
+	//"os"
 	"sync"
 	"sync/atomic"
 )
@@ -81,47 +81,45 @@ func (rs *resolvers) query(q *dns.Msg) (*dns.Msg, error) {
 		srv := rs.rs.Value.(*resolver)
 		rs.L().Debug().Msgf("Using DNS %v for %s", srv.addr, q.Question[0].Name)
 
-		if a, e := dns.Exchange(q, srv.addr.String()); e == nil {
-			if len(a.Answer) > 0 {
-				rs.L().Trace().Msgf("Got answer %s", a.Answer[0].String())
-			} else {
-				rs.L().Warn().Msgf("%s: empty answer", q.Question[0].Name)
-			}
+		if a, e := dns.Exchange(q, srv.addr.String()); e == nil && len(a.Answer) > 0 {
+			rs.L().Trace().Msgf("Got answer %s", a.Answer[0].String())
 			srv.ok()
 			return a, nil
 		} else {
 			srv.fail()
-			rs.L().Error().Err(e).Msgf("queryDns failed for %v", q.Question)
-
+			if e == nil && len(a.Answer) == 0 {
+				rs.L().Warn().Msgf("%s: empty answer, using: %s", q.Question[0].Name, srv.addr.String())
+			} else {
+				rs.L().Error().Err(e).Msgf("queryDns failed for %v", q.Question)
+			}
 			rs.rs = rs.rs.Next()
 
 			if head == rs.rs {
-				rs.L().Error().Msg("All DNS Servers doesn't respond")
+				rs.L().Error().Msg("All DNS Servers didn't respond")
 
-				if errors.Is(e, os.ErrDeadlineExceeded) {
-					return nil, errors.Join(fmt.Errorf("DNS op for %v failed ", q.Question), e)
-				}
-
-				cause := e
-				if unwrap, ok := cause.(interface{ Unwrap() error }); ok {
-					cause = unwrap.Unwrap()
-				}
-
-				var opError *net.OpError
-
-				switch {
-				case errors.As(cause, &opError):
-					rs.L().Error().Msgf("DNS op %s failed with %s on destination %s", opError.Op, opError.Error(),
-						opError.Addr)
-					//return nil, cause
-				default:
-					var rCode = -1
-					if a != nil {
-						rCode = a.Rcode
+				return a, errors.Join(fmt.Errorf("DNS op for %v failed ", q.Question), e)
+				/*
+					cause := e
+					if unwrap, ok := cause.(interface{ Unwrap() error }); ok {
+						cause = unwrap.Unwrap()
 					}
-					rs.L().Error().Err(errors.Join(fmt.Errorf("failed to dail %s, Rcode: %x", srv.addr, rCode), e))
-					//return nil, errors.Join(fmt.Errorf("failed to dail %s, Rcode: %x", srv.addr, rCode), e)
-				}
+
+					var opError *net.OpError
+
+					switch {
+					case errors.As(cause, &opError):
+						rs.L().Error().Msgf("DNS op %s failed with %s on destination %s", opError.Op, opError.Error(),
+							opError.Addr)
+						//return nil, cause
+					default:
+						var rCode = -1
+						if a != nil {
+							rCode = a.Rcode
+						}
+						rs.L().Error().Err(errors.Join(fmt.Errorf("failed to dail %s, Rcode: %x", srv.addr, rCode), e))
+						//return nil, errors.Join(fmt.Errorf("failed to dail %s, Rcode: %x", srv.addr, rCode), e)
+					}
+				*/
 			}
 		}
 	}
