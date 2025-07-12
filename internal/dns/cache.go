@@ -91,13 +91,9 @@ func (c *cache) shutdown() error {
 func (c *cache) upsert(fqdn string, answer *dns.Msg) error {
 	c.L().Trace().Msgf("-> upsert(%s)", fqdn)
 	defer c.L().Trace().Msgf("<- upsert(%s)", fqdn)
-	var ce *cacheEntry
+
 	var cn = dns.CanonicalName(fqdn)
-	if t, e := c.entries.Get(cn); t == nil && !errors.Is(e, gcache.KeyNotFoundError) {
-		return e
-	} else if t != nil {
-		ce = t.(*cacheEntry)
-	}
+	var ce = c.get(cn)
 	var gen = c.generation()
 	var prevIps []string
 	if ce == nil {
@@ -107,6 +103,7 @@ func (c *cache) upsert(fqdn string, answer *dns.Msg) error {
 		ce.answer = answer
 		ce.gen.Store(gen)
 		ce.updateTtl(c.minTtl)
+		ce.ResetFailures()
 	}
 
 	var ips = ce.Ip4s()
@@ -158,6 +155,21 @@ func (c *cache) register(fqdn string) error {
 	c.resolve(nil, q, false)
 
 	return nil
+}
+func (c *cache) get(fqdn string) *cacheEntry {
+	ce, _ := c.entries.Get(fqdn)
+	if ce == nil {
+		return nil
+	}
+	return ce.(*cacheEntry)
+}
+
+func (c *cache) fail(fqdn string, e error) {
+	ce := c.get(fqdn)
+
+	if ce != nil {
+		ce.IncFailures()
+	}
 }
 
 func (c *cache) unregister(fqdn string) error {
@@ -238,7 +250,7 @@ func (c *cache) notifyChanged(cn string) {
 	}, false)
 }
 
-func (c *cache) dump(callback func(fqdn string, ips []string, ttl time.Duration, expiration time.Time, gen uint64) error) error {
+func (c *cache) dump(callback func(fqdn string, fails uint64, ips []string, ttl time.Duration, expiration time.Time, gen uint64) error) error {
 	if callback == nil {
 		return errors.New("callback function is nil")
 	}
@@ -246,7 +258,7 @@ func (c *cache) dump(callback func(fqdn string, ips []string, ttl time.Duration,
 	all := c.entries.GetALL(true)
 	for k, v := range all {
 		ce := v.(*cacheEntry)
-		if e := callback(k.(string), ce.Ip4s(), ce.ttl, ce.expiration, ce.gen.Load()); e != nil {
+		if e := callback(k.(string), ce.Failures(), ce.Ip4s(), ce.ttl, ce.expiration, ce.gen.Load()); e != nil {
 			return e
 		}
 	}
