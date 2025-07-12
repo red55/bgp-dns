@@ -90,6 +90,13 @@ func (rs *resolvers) query(q *dns.Msg) (*dns.Msg, error) {
 			srv.ok()
 			return a, nil
 		} else {
+
+			if a != nil {
+				rs.L().Warn().Msgf("%s: We got answer using: %s, but it's empty so return it as is (%v)",
+					q.Question[0].Name, srv.addr.String(), q.Rcode)
+				return a, e
+			}
+
 			srv.fail()
 			if e == nil && len(a.Answer) == 0 {
 				if q.Question[0].Qtype == dns.TypeAAAA {
@@ -97,9 +104,10 @@ func (rs *resolvers) query(q *dns.Msg) (*dns.Msg, error) {
 				} else {
 					rs.L().Warn().Msgf("%s: empty answer, using: %s", q.Question[0].Name, srv.addr.String())
 				}
-
-				e = errors.Join(ErrEmptyAnswer, fmt.Errorf("empty answer from %s for %s", srv.addr.String(),
-					q.Question[0].Name))
+				if q.Question[0].Qtype == dns.TypeAAAA || q.Question[0].Qtype == dns.TypeA {
+					e = errors.Join(ErrEmptyAnswer, fmt.Errorf("empty answer from %s for %s", srv.addr.String(),
+						q.Question[0].Name))
+				}
 			} else {
 				rs.L().Error().Err(e).Msgf("queryDns failed for %v", q.Question)
 			}
@@ -108,7 +116,11 @@ func (rs *resolvers) query(q *dns.Msg) (*dns.Msg, error) {
 			if head == rs.rs {
 				rs.L().Error().Msg("All DNS Servers didn't respond")
 
-				return a, errors.Join(fmt.Errorf("all DNS servers failed for %v", q.Question), e)
+				if q.Question[0].Qtype == dns.TypeAAAA || q.Question[0].Qtype == dns.TypeA {
+					return a, errors.Join(fmt.Errorf("No A/AAA records on DNS servers for %v", q.Question), e)
+				} else {
+					return a, e
+				}
 
 				/*
 					cause := e
