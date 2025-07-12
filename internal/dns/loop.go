@@ -42,9 +42,9 @@ L:
 			}
 
 			if sleepUntil.After(ce.expiration) {
-				sleepUntil = ce.expiration
 				c.L().Trace().Msgf("Sleep until %s is less than %s (%s)", sleepUntil.Format(time.RFC3339),
 					ce.expiration.Format(time.RFC3339), k.(string))
+				sleepUntil = ce.expiration
 			}
 
 		}
