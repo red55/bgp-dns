@@ -5,34 +5,27 @@ import (
 )
 
 type loopOp struct {
-	f 	func () error
+	f     func() error
 	errCh chan error
 }
 
 type Loop struct {
-	opCh	chan *loopOp
-	l *log.Log
+	opCh chan *loopOp
+	l    *log.Log
 }
 
 func NewLoop(bufSize int) Loop {
 	l := log.NewLog(log.L(), "loop")
 	return Loop{
 		opCh: make(chan *loopOp, bufSize), //, bufSize
-		l: &l,
+		l:    &l,
 	}
 }
-func (l *Loop) ChanOp() chan *loopOp{
-	l.l.L().Trace().Msgf("Channel len: %d", len(l.opCh))
+func (l *Loop) ChanOp() chan *loopOp {
 	return l.opCh
 }
 
-func (l *Loop) Operation(f func () error, ret bool) (e error) {
-	//const s1 = 1
-	//const s2 = 2
-
-	// l.l.L().Trace().Caller(s1).Msg("--> loop.Operation")
-	//defer l.l.L().Trace().Caller(s1).Msg("<-- loop.Operation")
-
+func (l *Loop) Operation(f func() error, ret bool) (e error) {
 	var ec chan error
 
 	if ret {
@@ -41,21 +34,15 @@ func (l *Loop) Operation(f func () error, ret bool) (e error) {
 	}
 
 	defer func() {
-	//	l.l.L().Trace().Caller(s2).Msg("-> loop.Read result")
-	//	defer l.l.L().Trace().Caller(s2).Msg("<- loop.Read result")
 		if nil != ec {
-	//		l.l.L().Trace().Caller(s2).Msg("-> loop.Read error")
 			e = <-ec
-	//		l.l.L().Trace().Caller(s2).Msg("<- loop.Read error")
 		}
 	}()
 
-	//l.l.L().Trace().Caller(s1).Msg("-> loop.Invoke")
 	l.ChanOp() <- &loopOp{
 		f:     f,
 		errCh: ec,
 	}
-	//l.l.L().Trace().Caller(s1).Msg("<- loop.Invoke")
 	return
 }
 func (l *Loop) NoErr(o *loopOp) {

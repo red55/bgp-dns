@@ -6,6 +6,7 @@ import (
 	"github.com/miekg/dns"
 	"github.com/red55/bgp-dns/internal/config"
 	"github.com/red55/bgp-dns/internal/log"
+	"math"
 	"time"
 )
 
@@ -29,8 +30,6 @@ L:
 
 		for k, v := range all {
 			ce := v.(*cacheEntry)
-
-			c.L().Trace().Msgf("%s, ttl:%d, expire: %s", k.(string), ce.ttl, ce.expiration.Format(time.RFC3339))
 			if ce.expiration.Before(now) {
 				q := new(dns.Msg)
 				cn := dns.CanonicalName(k.(string))
@@ -38,18 +37,20 @@ L:
 				c.L().Debug().Msgf("Resolving cached %s", k.(string))
 				// resolve will call cache.upsert on resolved IPs
 				c.resolve(nil, q, false)
-				c.L().Trace().Msgf("Resolved cached %s, ttl:%d, expire: %s", k.(string), ce.ttl, ce.expiration.Format(time.RFC3339))
+				c.L().Trace().Msgf("Resolved cached %s, ttl:%d, expire: %s",
+					k.(string), ce.ttl, ce.expiration.Format(time.RFC3339))
 			}
 
 			if sleepUntil.After(ce.expiration) {
 				sleepUntil = ce.expiration
-				c.L().Trace().Msgf("Sleep until %s for %d seconds", sleepUntil.Format(time.RFC3339),
-					sleepUntil.Sub(now)/time.Second)
+				c.L().Trace().Msgf("Sleep until %s is less than %s (%s)", sleepUntil.Format(time.RFC3339),
+					ce.expiration.Format(time.RFC3339), k.(string))
 			}
 
 		}
-		c.L().Trace().Msgf("Calculated sleep until and now difference in sec %d ", sleepUntil.Sub(now)/time.Second)
-		if sleepUntil.Sub(now) < cfg.Dns.Cache.MinTtl*time.Second {
+		c.L().Trace().Msgf("Calculated sleep until and now difference is %d sec",
+			time.Duration(math.Abs(float64(sleepUntil.Sub(now))))/time.Second)
+		if time.Duration(math.Abs(float64(sleepUntil.Sub(now)))) < cfg.Dns.Cache.MinTtl*time.Second {
 			sleepUntil = now.Add(cfg.Dns.Cache.MinTtl * time.Second)
 		}
 

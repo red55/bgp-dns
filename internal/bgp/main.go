@@ -136,14 +136,11 @@ func Advance(ips []string) error {
 	return _bgp.Operation(func() (e error) {
 		for _, ip := range ips {
 			counter := new(atomic.Uint64)
-			_bgp.L().Trace().Msgf("Before GetOrInsert: %s", ip)
-
 			refs, ok := _bgp.ipRefCounter[ip]
 			if !ok {
 				refs = counter
 				_bgp.ipRefCounter[ip] = counter
 			}
-			_bgp.L().Trace().Msgf("After GetOrInsert: %s, %v, %t", ip, refs, ok)
 			c := refs.Add(1)
 			if c == 1 {
 				_bgp.L().Debug().Msgf("Advance IPs: %s", ip)
@@ -153,7 +150,7 @@ func Advance(ips []string) error {
 				}
 				e = _bgp.add(prefix, _bgp.asn)
 			} else {
-				_bgp.L().Debug().Msgf("No need to change BGP, %v(%d)", ip, c)
+				_bgp.L().Debug().Msgf("Advance IPs: No need to change BGP, %v(%d)", ip, c)
 			}
 		}
 		return
@@ -162,11 +159,9 @@ func Advance(ips []string) error {
 
 func Withdraw(ips []string) error {
 	return _bgp.Operation(func() (e error) {
-		_bgp.L().Trace().Msgf("-> Withdraw")
-		defer _bgp.L().Trace().Msgf("<- Withdraw")
 		for _, ip := range ips {
 			if refs, exists := _bgp.ipRefCounter[ip]; exists {
-				c := refs.Add(^uint64(0))
+				c := refs.Add(^uint64(0)) // Decrement the counter by 1
 				if c < 1 {
 					_bgp.L().Debug().Msgf("Withdraw IPs: %v", ip)
 					prefix := &bgpapi.IPAddressPrefix{
@@ -176,11 +171,9 @@ func Withdraw(ips []string) error {
 					if e = _bgp.remove(prefix, _bgp.asn); e != nil {
 						_bgp.L().Error().Err(e)
 					}
-					_bgp.L().Trace().Msg("Before map delete")
 					delete(_bgp.ipRefCounter, ip)
-					_bgp.L().Trace().Msg("After map delete")
 				} else {
-					_bgp.L().Debug().Msgf("No need to change BGP, %v(%d)", ip, c)
+					_bgp.L().Debug().Msgf("Withdraw IPs: No need to change BGP, %v(%d)", ip, c)
 				}
 			}
 		}
