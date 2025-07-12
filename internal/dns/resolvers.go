@@ -8,9 +8,13 @@ import (
 	"github.com/red55/bgp-dns/internal/log"
 	"github.com/sourcegraph/conc/iter"
 	"net"
-	//"os"
 	"sync"
 	"sync/atomic"
+)
+
+var (
+	ErrNoResolvers = errors.New("no resolvers available")
+	ErrEmptyAnswer = errors.New("empty answer from resolver")
 )
 
 type resolver struct {
@@ -73,7 +77,7 @@ func (rs *resolvers) query(q *dns.Msg) (*dns.Msg, error) {
 	defer rs.m.RUnlock()
 
 	if rs.rs == nil || rs.rs.Len() < 1 {
-		return nil, fmt.Errorf("resolvers are empty, cannot resolve")
+		return nil, ErrNoResolvers
 	}
 
 	head := rs.rs
@@ -89,6 +93,8 @@ func (rs *resolvers) query(q *dns.Msg) (*dns.Msg, error) {
 			srv.fail()
 			if e == nil && len(a.Answer) == 0 {
 				rs.L().Warn().Msgf("%s: empty answer, using: %s", q.Question[0].Name, srv.addr.String())
+				e = errors.Join(ErrEmptyAnswer, fmt.Errorf("empty answer from %s for %s", srv.addr.String(),
+					q.Question[0].Name))
 			} else {
 				rs.L().Error().Err(e).Msgf("queryDns failed for %v", q.Question)
 			}
@@ -97,7 +103,8 @@ func (rs *resolvers) query(q *dns.Msg) (*dns.Msg, error) {
 			if head == rs.rs {
 				rs.L().Error().Msg("All DNS Servers didn't respond")
 
-				return a, errors.Join(fmt.Errorf("DNS op for %v failed ", q.Question), e)
+				return a, errors.Join(fmt.Errorf("all DNS servers failed for %v", q.Question), e)
+
 				/*
 					cause := e
 					if unwrap, ok := cause.(interface{ Unwrap() error }); ok {

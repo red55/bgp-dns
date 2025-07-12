@@ -1,6 +1,7 @@
 package dns
 
 import (
+	"errors"
 	"github.com/miekg/dns"
 	"slices"
 )
@@ -9,7 +10,7 @@ func (c *cache) resolve(w dns.ResponseWriter, q *dns.Msg, notifyChanged bool) {
 	var a *dns.Msg
 	var e error
 
-	if a, e = c.rs.query(q); e != nil {
+	if a, e = c.rs.query(q); e != nil && !errors.Is(e, ErrEmptyAnswer) {
 		c.L().Error().Err(e).Msg("Failed to query Resolvers")
 		return
 	}
