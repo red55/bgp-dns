@@ -76,7 +76,7 @@ func (CacheCliServiceImpl) ListCacheEntries(unused *emptypb.Empty, stream grpc.S
 	if stream == nil {
 		return status.Error(codes.InvalidArgument, "stream cannot be nil")
 	}
-	return dns.DumpCache(func(fqdn string, ips []string, ttl time.Duration, expiration time.Time, gen uint64) error {
+	return dns.DumpCache(func(fqdn string, fails uint64, ips []string, ttl time.Duration, expiration time.Time, gen uint64) error {
 		resp := api.ListCacheEntriesResponse{
 			Type:       "A",
 			Fqdn:       fqdn,
@@ -84,6 +84,7 @@ func (CacheCliServiceImpl) ListCacheEntries(unused *emptypb.Empty, stream grpc.S
 			Generation: fmt.Sprintf("%d", gen),
 			Ttl:        int64(ttl),
 			Expiration: expiration.UnixMilli(),
+			Fails:      fails,
 		}
 		return stream.Send(&resp)
 	})

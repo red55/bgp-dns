@@ -52,8 +52,9 @@ func newCacheListCmd(_app *app.Application, client *api.BgpDnsServiceClient) *co
 				if err != nil {
 					return err
 				}
-				_app.L().Info().Msgf("fqdn:%s addr:%s ttl:%d exp:%s gen:%s",
+				_app.L().Info().Msgf("fqdn:%s fails: %d addr:%s ttl:%d exp:%s gen:%s",
 					r.Fqdn,
+					r.Fails,
 					strings.Join(r.Addr, ","),
 					r.Ttl,
 					time.UnixMilli(r.Expiration).Format(time.RFC3339),
