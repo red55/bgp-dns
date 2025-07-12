@@ -92,7 +92,12 @@ func (rs *resolvers) query(q *dns.Msg) (*dns.Msg, error) {
 		} else {
 			srv.fail()
 			if e == nil && len(a.Answer) == 0 {
-				rs.L().Warn().Msgf("%s: empty answer, using: %s", q.Question[0].Name, srv.addr.String())
+				if q.Question[0].Qtype == dns.TypeAAAA {
+					rs.L().Warn().Msgf("%s: AAAA empty answer, using: %s", q.Question[0].Name, srv.addr.String())
+				} else {
+					rs.L().Warn().Msgf("%s: empty answer, using: %s", q.Question[0].Name, srv.addr.String())
+				}
+
 				e = errors.Join(ErrEmptyAnswer, fmt.Errorf("empty answer from %s for %s", srv.addr.String(),
 					q.Question[0].Name))
 			} else {
