@@ -97,7 +97,7 @@ func Load(fn string) error {
 	return _cache.load(fn)
 }
 
-func DumpCache(callback func(fqdn string, ips []string, ttl time.Duration, expiration time.Time, gen uint64) error) error {
+func DumpCache(callback func(fqdn string, fails uint64, ips []string, ttl time.Duration, expiration time.Time, gen uint64) error) error {
 	if _cache == nil {
 		return ENotInitialized
 	}
