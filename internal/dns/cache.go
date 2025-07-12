@@ -164,7 +164,7 @@ func (c *cache) get(fqdn string) *cacheEntry {
 	return ce.(*cacheEntry)
 }
 
-func (c *cache) fail(fqdn string, e error) {
+func (c *cache) fail(fqdn string) {
 	ce := c.get(fqdn)
 
 	if ce != nil {
@@ -244,7 +244,7 @@ func (c *cache) evictByGeneration(gen uint64) error {
 }
 
 func (c *cache) notifyChanged(cn string) {
-	c.Operation(func() error {
+	_ = c.Operation(func() error {
 		c.L().Debug().Msgf("Signaling cache changed for %s", cn)
 		return nil
 	}, false)
