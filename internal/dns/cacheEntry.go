@@ -1,11 +1,8 @@
 package dns
 
 import (
-	"errors"
 	"fmt"
 	"github.com/miekg/dns"
-	"github.com/sourcegraph/conc/iter"
-	"net"
 	"sync/atomic"
 	"time"
 )
@@ -36,10 +33,6 @@ type cacheEntry struct {
 	expiration time.Time
 	failures   atomic.Uint64
 }
-
-var (
-	ENotAddressAnswer = errors.New("not an A/AAAA answer")
-)
 
 func minTtl(m *dns.Msg, minTtl time.Duration) (r time.Duration) {
 	for _, rr := range m.Answer {
