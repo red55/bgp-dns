@@ -13,7 +13,7 @@ type cacheKey struct {
 }
 
 func (ck cacheKey) String() string {
-	return fmt.Sprintf("%s:%d", ck.fqdn, dns.TypeToString[ck.qtype])
+	return fmt.Sprintf("%s:%s", ck.fqdn, dns.TypeToString[ck.qtype])
 }
 func (ck cacheKey) Equals(other cacheKey) bool {
 	return ck.fqdn == other.fqdn && ck.qtype == other.qtype
