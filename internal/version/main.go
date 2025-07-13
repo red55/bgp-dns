@@ -4,13 +4,15 @@ import (
 	"fmt"
 )
 
+const unknown = "unknown"
+
 var (
 	version = "dev"
 	commit  = "none"
-	date    = "unknown"
+	date    = unknown
+	builtBy = unknown
 )
 
 func Version() string {
-	msg := fmt.Sprintf("%s (%s) built on %s", version, commit, date)
-	return msg
+	return fmt.Sprintf("%s (%s) built at %s by %s", version, commit, date, builtBy)
 }
