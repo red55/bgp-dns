@@ -108,7 +108,7 @@ func (c *cache) upsert(fqdn string, qtype uint16, answer *dns.Msg) error {
 	_ = bgp.Advance(arrived)
 	_ = bgp.Withdraw(gone)
 
-	if e := c.entries.Set(newCacheKey(fqdn, qtype), ce); e != nil {
+	if e := c.entries.Set(newCacheKey(cn, qtype), ce); e != nil {
 		c.L().Error().Err(e)
 		return e
 	}
