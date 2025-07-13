@@ -4,9 +4,30 @@ import (
 	"errors"
 	"fmt"
 	"github.com/miekg/dns"
+	"github.com/sourcegraph/conc/iter"
+	"net"
 	"sync/atomic"
 	"time"
 )
+
+type cacheKey struct {
+	fqdn  string
+	qtype uint16
+}
+
+func (ck cacheKey) String() string {
+	return fmt.Sprintf("%s:%d", ck.fqdn, dns.TypeToString[ck.qtype])
+}
+func (ck cacheKey) Equals(other cacheKey) bool {
+	return ck.fqdn == other.fqdn && ck.qtype == other.qtype
+}
+func newCacheKey(fqdn string, qtype uint16) (new cacheKey) {
+	new = cacheKey{
+		fqdn:  fqdn,
+		qtype: qtype,
+	}
+	return new
+}
 
 type cacheEntry struct {
 	gen        atomic.Uint64
@@ -61,6 +82,17 @@ func (ce *cacheEntry) Ip4s() (ips []string) {
 	for _, rr := range ce.answer.Answer {
 		if a, ok := rr.(*dns.A); ok {
 			ips = append(ips, a.A.String())
+		}
+		if a, ok := rr.(*dns.HTTPS); ok {
+			for _, svcb := range a.SVCB.Value {
+				if hint, ok := svcb.(*dns.SVCBIPv4Hint); ok {
+					for _, ip := range hint.Hint {
+						if ip != nil {
+							ips = append(ips, ip.String())
+						}
+					}
+				}
+			}
 		}
 	}
 	return ips
