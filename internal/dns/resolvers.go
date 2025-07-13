@@ -83,30 +83,32 @@ func (rs *resolvers) query(q *dns.Msg) (*dns.Msg, error) {
 	head := rs.rs
 	for {
 		srv := rs.rs.Value.(*resolver)
-		rs.L().Debug().Msgf("Using DNS %v for %s", srv.addr, q.Question[0].Name)
+		rs.L().Debug().Msgf("Using DNS %v for %s (%s)",
+			srv.addr, q.Question[0].Name, dns.TypeToString[q.Question[0].Qtype])
 
 		if a, e := dns.Exchange(q, srv.addr.String()); e == nil && len(a.Answer) > 0 {
 			rs.L().Trace().Msgf("Got answer %s", a.Answer[0].String())
 			srv.ok()
 			return a, nil
 		} else {
+			if e == nil {
+				rs.L().Warn().Msgf("%s: We got answer using: %s, rcode: %s, qtype: %s",
+					q.Question[0].Name, srv.addr.String(), dns.RcodeToString[a.Rcode], dns.TypeToString[q.Question[0].Qtype])
+			} else {
+				rs.L().Warn().Msgf("%s: error %v, using: %s", q.Question[0].Name, e, srv.addr.String())
+			}
 
-			if a != nil {
+			if a != nil && a.Rcode == dns.RcodeSuccess {
+				srv.ok()
 				rs.L().Warn().Msgf("%s: We got answer using: %s, but it's empty so return it as is (%s)",
 					q.Question[0].Name, srv.addr.String(), dns.RcodeToString[a.Rcode])
-
-				if a.Rcode != dns.RcodeSuccess {
-					return a, e
-				}
+				return a, e
 			}
 
 			srv.fail()
 			if e == nil && len(a.Answer) == 0 {
-				if q.Question[0].Qtype == dns.TypeAAAA {
-					rs.L().Warn().Msgf("%s: AAAA empty answer, using: %s", q.Question[0].Name, srv.addr.String())
-				} else {
-					rs.L().Warn().Msgf("%s: empty answer, using: %s", q.Question[0].Name, srv.addr.String())
-				}
+				rs.L().Warn().Msgf("%s: %s empty answer, using: %s",
+					q.Question[0].Name, dns.TypeToString[q.Question[0].Qtype], srv.addr.String())
 			} else {
 				rs.L().Error().Err(e).Msgf("queryDns failed for %v", q.Question)
 			}
@@ -116,7 +118,8 @@ func (rs *resolvers) query(q *dns.Msg) (*dns.Msg, error) {
 				rs.L().Error().Msg("All DNS Servers didn't respond")
 
 				if q.Question[0].Qtype == dns.TypeAAAA || q.Question[0].Qtype == dns.TypeA {
-					return a, errors.Join(fmt.Errorf("No A/AAA records on DNS servers for %v", q.Question), e)
+					return a, errors.Join(fmt.Errorf("no %s records on DNS servers for %v",
+						dns.TypeToString[q.Question[0].Qtype], q.Question), e)
 				} else {
 					return a, e
 				}
