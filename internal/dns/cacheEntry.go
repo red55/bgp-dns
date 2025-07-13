@@ -86,11 +86,11 @@ func (ce *cacheEntry) Ip4s() (ips []string) {
 		if a, ok := rr.(*dns.HTTPS); ok {
 			for _, svcb := range a.SVCB.Value {
 				if hint, ok := svcb.(*dns.SVCBIPv4Hint); ok {
-					iter.ForEach(hint.Hint, func(ip *net.IP) {
+					for _, ip := range hint.Hint {
 						if ip != nil {
 							ips = append(ips, ip.String())
 						}
-					})
+					}
 				}
 			}
 		}
