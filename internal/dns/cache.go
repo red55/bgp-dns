@@ -11,7 +11,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/beevik/prefixtree/v2"
 	"github.com/bluele/gcache"
 	"github.com/miekg/dns"
 	"github.com/red55/bgp-dns/internal/bgp"
@@ -21,14 +20,11 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type entries *prefixtree.Tree[cacheEntry]
-
 type cache struct {
 	loop.Loop
 	log.Log
 	m       sync.RWMutex
 	wg      sync.WaitGroup
-	pref    entries
 	entries gcache.Cache
 	cancel  context.CancelFunc
 	rs      *resolvers
@@ -40,7 +36,6 @@ func newCache(max int, minTtl time.Duration, rs *resolvers, l *zerolog.Logger) (
 	r = &cache{
 		Loop:   loop.NewLoop(1),
 		Log:    log.NewLog(l, "dns"),
-		pref:   prefixtree.New[cacheEntry](),
 		cancel: nil,
 		rs:     rs,
 		minTtl: minTtl,
@@ -88,12 +83,12 @@ func (c *cache) shutdown() error {
 	return nil
 }
 
-func (c *cache) upsert(fqdn string, answer *dns.Msg) error {
+func (c *cache) upsert(fqdn string, qtype uint16, answer *dns.Msg) error {
 	c.L().Trace().Msgf("-> upsert(%s)", fqdn)
 	defer c.L().Trace().Msgf("<- upsert(%s)", fqdn)
 
 	var cn = dns.CanonicalName(fqdn)
-	var ce = c.get(cn)
+	var ce = c.get(cn, qtype)
 	var gen = c.generation()
 	var prevIps []string
 	if ce == nil {
@@ -113,7 +108,7 @@ func (c *cache) upsert(fqdn string, answer *dns.Msg) error {
 	_ = bgp.Advance(arrived)
 	_ = bgp.Withdraw(gone)
 
-	if e := c.entries.Set(fqdn, ce); e != nil {
+	if e := c.entries.Set(newCacheKey(fqdn, qtype), ce); e != nil {
 		c.L().Error().Err(e)
 		return e
 	}
@@ -136,9 +131,7 @@ func (c *cache) findKeysByGeneration(gen uint64) []string {
 	return r
 }
 
-func (c *cache) has(k string) bool {
-	return c.entries.Has(k)
-}
+var requestTypes = []uint16{dns.TypeA, dns.TypeHTTPS}
 
 func (c *cache) register(fqdn string) error {
 	if len(fqdn) < 2 {
@@ -150,22 +143,24 @@ func (c *cache) register(fqdn string) error {
 	})
 
 	q := new(dns.Msg)
-	q.SetQuestion(cn, dns.TypeA)
-	// resolve will call cache.upsert on resolved IPs
-	c.resolve(nil, q, false)
+	for _, t := range requestTypes {
+		q.SetQuestion(cn, t)
+		// resolve will call cache.upsert on resolved IPs
+		c.resolve(nil, q, false)
+	}
 
 	return nil
 }
-func (c *cache) get(fqdn string) *cacheEntry {
-	ce, _ := c.entries.Get(fqdn)
+func (c *cache) get(fqdn string, qtype uint16) *cacheEntry {
+	ce, _ := c.entries.Get(newCacheKey(fqdn, qtype))
 	if ce == nil {
 		return nil
 	}
 	return ce.(*cacheEntry)
 }
 
-func (c *cache) fail(fqdn string) {
-	ce := c.get(fqdn)
+func (c *cache) fail(fqdn string, qtype uint16) {
+	ce := c.get(fqdn, qtype)
 
 	if ce != nil {
 		ce.IncFailures()
@@ -180,10 +175,10 @@ func (c *cache) unregister(fqdn string) error {
 	c.L().Debug().Msgf("Unregistering %s", cn)
 	dns.HandleRemove(cn)
 
-	var kr []string
+	var kr []cacheKey
 	for _, k := range c.entries.Keys(true) {
-		s := k.(string)
-		if strings.HasSuffix(s, cn) {
+		s := k.(cacheKey)
+		if strings.HasPrefix(s.fqdn, cn) {
 			kr = append(kr, s)
 		}
 	}
@@ -250,7 +245,7 @@ func (c *cache) notifyChanged(cn string) {
 	}, false)
 }
 
-func (c *cache) dump(callback func(fqdn string, fails uint64, ips []string, ttl time.Duration, expiration time.Time, gen uint64) error) error {
+func (c *cache) dump(callback func(qtype uint16, fqdn string, fails uint64, ips []string, ttl time.Duration, expiration time.Time, gen uint64) error) error {
 	if callback == nil {
 		return errors.New("callback function is nil")
 	}
@@ -258,7 +253,8 @@ func (c *cache) dump(callback func(fqdn string, fails uint64, ips []string, ttl 
 	all := c.entries.GetALL(true)
 	for k, v := range all {
 		ce := v.(*cacheEntry)
-		if e := callback(k.(string), ce.Failures(), ce.Ip4s(), ce.ttl, ce.expiration, ce.gen.Load()); e != nil {
+		key := k.(cacheKey)
+		if e := callback(key.qtype, key.fqdn, ce.Failures(), ce.Ip4s(), ce.ttl, ce.expiration, ce.gen.Load()); e != nil {
 			return e
 		}
 	}

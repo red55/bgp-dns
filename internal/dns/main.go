@@ -21,6 +21,8 @@ var (
 
 	EInvalidFQDN    = errors.New("invalid FQDN")
 	ENotInitialized = errors.New("cache subsystem is not initialized")
+
+	QTypeToString = dns.TypeToString
 )
 
 func Serve(ctx context.Context) (e error) {
@@ -76,19 +78,6 @@ func Shutdown(ctx context.Context) error {
 
 	return nil
 }
-func Register(fqdn string) error {
-	if _cache == nil {
-		return ENotInitialized
-	}
-	return _cache.register(fqdn)
-}
-
-func Unregister(fqdn string) error {
-	if _cache == nil {
-		return ENotInitialized
-	}
-	return _cache.unregister(fqdn)
-}
 
 func Load(fn string) error {
 	if _cache == nil {
@@ -97,7 +86,7 @@ func Load(fn string) error {
 	return _cache.load(fn)
 }
 
-func DumpCache(callback func(fqdn string, fails uint64, ips []string, ttl time.Duration, expiration time.Time, gen uint64) error) error {
+func DumpCache(callback func(qtype uint16, fqdn string, fails uint64, ips []string, ttl time.Duration, expiration time.Time, gen uint64) error) error {
 	if _cache == nil {
 		return ENotInitialized
 	}

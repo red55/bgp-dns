@@ -29,7 +29,7 @@ func (c *cache) resolve(w dns.ResponseWriter, q *dns.Msg, notifyChanged bool) {
 	qn := q.Question[0].Name
 
 	// if i > -1 {
-	if e = c.upsert(qn, a); e != nil {
+	if e = c.upsert(qn, q.Question[0].Qtype, a); e != nil {
 		c.L().Warn().Err(e).Msg("Failed to update cache")
 		return
 	}
