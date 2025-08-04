@@ -5,7 +5,7 @@ go 1.24.4
 require (
 	github.com/bluele/gcache v0.0.2
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/miekg/dns v1.1.67
+	github.com/miekg/dns v1.1.68
 	github.com/osrg/gobgp/v3 v3.37.0
 	github.com/rs/zerolog v1.34.0
 	github.com/sourcegraph/conc v0.3.0
