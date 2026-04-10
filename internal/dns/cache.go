@@ -260,3 +260,28 @@ func (c *cache) dump(callback func(qtype uint16, fqdn string, fails uint64, ips 
 	}
 	return nil
 }
+
+func (c *cache) clear() uint64 {
+	c.L().Debug().Msg("Clearing all cache entries")
+	defer c.L().Debug().Msg("Clearing all cache entries done")
+
+	// Collect all IPs from all cache entries for BGP withdrawal
+	var allIps []string
+	all := c.entries.GetALL(true)
+	for _, v := range all {
+		ce := v.(*cacheEntry)
+		allIps = append(allIps, ce.Ip4s()...)
+	}
+
+	// Purge all entries from the cache
+	c.entries.Purge()
+
+	// Withdraw all IPs from BGP
+	if len(allIps) > 0 {
+		if e := bgp.Withdraw(allIps); e != nil {
+			c.L().Error().Err(e).Msg("Failed to withdraw IPs after cache clear")
+		}
+	}
+
+	return uint64(len(all))
+}
