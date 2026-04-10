@@ -7,6 +7,8 @@ write unit test for code you implemented. run unit test in separate agent and se
 
 Use `git-expert` agent for git operations.
 
-Each phase of plan has to be called in separate agent to avoid main context window pollution. 
+Each phase of plan has to be called in separate agent to avoid main context window pollution.
 
 use QWEN.md as context memory for this project.
+
+if you have corresponding questions feel free to ask me.
