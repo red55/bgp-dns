@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -25,7 +26,7 @@ func newCacheCmd(_app *app.Application, client *api.BgpDnsServiceClient) *cobra.
 
 	cmd.AddCommand(
 		newCacheListCmd(_app, client),
-		//newCacheClearCmd(_app, client),
+		newCacheClearCmd(_app, client),
 	)
 
 	return cmd
@@ -73,18 +74,20 @@ func newCacheListCmd(_app *app.Application, client *api.BgpDnsServiceClient) *co
 	return cmd
 }
 
-/*
 func newCacheClearCmd(_app *app.Application, client *api.BgpDnsServiceClient) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "clear",
 		Short: "Clear DNS cache entries",
-		Long:  "Clear all entries in the DNS cache.",
-		Run: func(cmd *cobra.Command, args []string) {
-			// Implementation for clearing cache entries
-			_, _ = os.Stdout.WriteString("Clearing DNS cache entries...\n")
+		Long:  "Clear all entries in the DNS cache and withdraw associated IPs from BGP peers.",
+		RunE: func(cmd *cobra.Command, args []string) (e error) {
+			resp, err := (*client).ClearCache(context.Background(), &api.ClearCacheRequest{})
+			if err != nil {
+				return err
+			}
+			_, _ = os.Stdout.WriteString(fmt.Sprintf("Cleared %d cache entries.\n", resp.ClearedCount))
+			return nil
 		},
 	}
 
 	return cmd
 }
-*/
