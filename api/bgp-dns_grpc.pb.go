@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	BgpDnsService_ListCacheEntries_FullMethodName = "/api.BgpDnsService/ListCacheEntries"
+	BgpDnsService_ClearCache_FullMethodName       = "/api.BgpDnsService/ClearCache"
 )
 
 // BgpDnsServiceClient is the client API for BgpDnsService service.
@@ -28,6 +29,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type BgpDnsServiceClient interface {
 	ListCacheEntries(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ListCacheEntriesResponse], error)
+	ClearCache(ctx context.Context, in *ClearCacheRequest, opts ...grpc.CallOption) (*ClearCacheResponse, error)
 }
 
 type bgpDnsServiceClient struct {
@@ -54,6 +56,16 @@ func (c *bgpDnsServiceClient) ListCacheEntries(ctx context.Context, in *emptypb.
 	return x, nil
 }
 
+func (c *bgpDnsServiceClient) ClearCache(ctx context.Context, in *ClearCacheRequest, opts ...grpc.CallOption) (*ClearCacheResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ClearCacheResponse)
+	err := c.cc.Invoke(ctx, BgpDnsService_ClearCache_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type BgpDnsService_ListCacheEntriesClient = grpc.ServerStreamingClient[ListCacheEntriesResponse]
 
@@ -62,6 +74,7 @@ type BgpDnsService_ListCacheEntriesClient = grpc.ServerStreamingClient[ListCache
 // for forward compatibility.
 type BgpDnsServiceServer interface {
 	ListCacheEntries(*emptypb.Empty, grpc.ServerStreamingServer[ListCacheEntriesResponse]) error
+	ClearCache(context.Context, *ClearCacheRequest) (*ClearCacheResponse, error)
 	mustEmbedUnimplementedBgpDnsServiceServer()
 }
 
@@ -74,6 +87,9 @@ type UnimplementedBgpDnsServiceServer struct{}
 
 func (UnimplementedBgpDnsServiceServer) ListCacheEntries(*emptypb.Empty, grpc.ServerStreamingServer[ListCacheEntriesResponse]) error {
 	return status.Errorf(codes.Unimplemented, "method ListCacheEntries not implemented")
+}
+func (UnimplementedBgpDnsServiceServer) ClearCache(context.Context, *ClearCacheRequest) (*ClearCacheResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClearCache not implemented")
 }
 func (UnimplementedBgpDnsServiceServer) mustEmbedUnimplementedBgpDnsServiceServer() {}
 func (UnimplementedBgpDnsServiceServer) testEmbeddedByValue()                       {}
@@ -104,6 +120,24 @@ func _BgpDnsService_ListCacheEntries_Handler(srv interface{}, stream grpc.Server
 	return srv.(BgpDnsServiceServer).ListCacheEntries(m, &grpc.GenericServerStream[emptypb.Empty, ListCacheEntriesResponse]{ServerStream: stream})
 }
 
+func _BgpDnsService_ClearCache_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ClearCacheRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BgpDnsServiceServer).ClearCache(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BgpDnsService_ClearCache_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BgpDnsServiceServer).ClearCache(ctx, req.(*ClearCacheRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type BgpDnsService_ListCacheEntriesServer = grpc.ServerStreamingServer[ListCacheEntriesResponse]
 
@@ -113,7 +147,12 @@ type BgpDnsService_ListCacheEntriesServer = grpc.ServerStreamingServer[ListCache
 var BgpDnsService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "api.BgpDnsService",
 	HandlerType: (*BgpDnsServiceServer)(nil),
-	Methods:     []grpc.MethodDesc{},
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ClearCache",
+			Handler:    _BgpDnsService_ClearCache_Handler,
+		},
+	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "ListCacheEntries",

@@ -6,6 +6,15 @@ option go_package = "github.com/red55/bgp-dns/api;api";
 
 service BgpDnsService {
   rpc ListCacheEntries(google.protobuf.Empty) returns (stream ListCacheEntriesResponse);
+  rpc ClearCache(ClearCacheRequest) returns (ClearCacheResponse);
+}
+
+message ClearCacheRequest {
+  // Empty request - clears all cache entries
+}
+
+message ClearCacheResponse {
+  uint64 cleared_count = 1;
 }
 
 message ListCacheEntriesRequest {
