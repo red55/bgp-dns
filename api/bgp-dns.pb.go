@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        (unknown)
-// source: api/bgp-dns.proto
+// source: proto/api/bgp-dns.proto
 
 package api
 
@@ -30,7 +30,7 @@ type ListCacheEntriesRequest struct {
 
 func (x *ListCacheEntriesRequest) Reset() {
 	*x = ListCacheEntriesRequest{}
-	mi := &file_api_bgp_dns_proto_msgTypes[0]
+	mi := &file_proto_api_bgp_dns_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -42,7 +42,7 @@ func (x *ListCacheEntriesRequest) String() string {
 func (*ListCacheEntriesRequest) ProtoMessage() {}
 
 func (x *ListCacheEntriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_bgp_dns_proto_msgTypes[0]
+	mi := &file_proto_api_bgp_dns_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -55,7 +55,7 @@ func (x *ListCacheEntriesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCacheEntriesRequest.ProtoReflect.Descriptor instead.
 func (*ListCacheEntriesRequest) Descriptor() ([]byte, []int) {
-	return file_api_bgp_dns_proto_rawDescGZIP(), []int{0}
+	return file_proto_api_bgp_dns_proto_rawDescGZIP(), []int{0}
 }
 
 type ListCacheEntriesResponse struct {
@@ -73,7 +73,7 @@ type ListCacheEntriesResponse struct {
 
 func (x *ListCacheEntriesResponse) Reset() {
 	*x = ListCacheEntriesResponse{}
-	mi := &file_api_bgp_dns_proto_msgTypes[1]
+	mi := &file_proto_api_bgp_dns_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -85,7 +85,7 @@ func (x *ListCacheEntriesResponse) String() string {
 func (*ListCacheEntriesResponse) ProtoMessage() {}
 
 func (x *ListCacheEntriesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_bgp_dns_proto_msgTypes[1]
+	mi := &file_proto_api_bgp_dns_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -98,7 +98,7 @@ func (x *ListCacheEntriesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCacheEntriesResponse.ProtoReflect.Descriptor instead.
 func (*ListCacheEntriesResponse) Descriptor() ([]byte, []int) {
-	return file_api_bgp_dns_proto_rawDescGZIP(), []int{1}
+	return file_proto_api_bgp_dns_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *ListCacheEntriesResponse) GetType() string {
@@ -150,11 +150,11 @@ func (x *ListCacheEntriesResponse) GetFails() uint64 {
 	return 0
 }
 
-var File_api_bgp_dns_proto protoreflect.FileDescriptor
+var File_proto_api_bgp_dns_proto protoreflect.FileDescriptor
 
-const file_api_bgp_dns_proto_rawDesc = "" +
+const file_proto_api_bgp_dns_proto_rawDesc = "" +
 	"\n" +
-	"\x11api/bgp-dns.proto\x12\x03api\x1a\x1bgoogle/protobuf/empty.proto\"\x19\n" +
+	"\x17proto/api/bgp-dns.proto\x12\x03api\x1a\x1bgoogle/protobuf/empty.proto\"\x19\n" +
 	"\x17ListCacheEntriesRequest\"\xbe\x01\n" +
 	"\x18ListCacheEntriesResponse\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x12\n" +
@@ -172,24 +172,24 @@ const file_api_bgp_dns_proto_rawDesc = "" +
 	"\x10ListCacheEntries\x12\x16.google.protobuf.Empty\x1a\x1d.api.ListCacheEntriesResponse0\x01B\"Z github.com/red55/bgp-dns/api;apib\x06proto3"
 
 var (
-	file_api_bgp_dns_proto_rawDescOnce sync.Once
-	file_api_bgp_dns_proto_rawDescData []byte
+	file_proto_api_bgp_dns_proto_rawDescOnce sync.Once
+	file_proto_api_bgp_dns_proto_rawDescData []byte
 )
 
-func file_api_bgp_dns_proto_rawDescGZIP() []byte {
-	file_api_bgp_dns_proto_rawDescOnce.Do(func() {
-		file_api_bgp_dns_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_api_bgp_dns_proto_rawDesc), len(file_api_bgp_dns_proto_rawDesc)))
+func file_proto_api_bgp_dns_proto_rawDescGZIP() []byte {
+	file_proto_api_bgp_dns_proto_rawDescOnce.Do(func() {
+		file_proto_api_bgp_dns_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_api_bgp_dns_proto_rawDesc), len(file_proto_api_bgp_dns_proto_rawDesc)))
 	})
-	return file_api_bgp_dns_proto_rawDescData
+	return file_proto_api_bgp_dns_proto_rawDescData
 }
 
-var file_api_bgp_dns_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
-var file_api_bgp_dns_proto_goTypes = []any{
+var file_proto_api_bgp_dns_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_proto_api_bgp_dns_proto_goTypes = []any{
 	(*ListCacheEntriesRequest)(nil),  // 0: api.ListCacheEntriesRequest
 	(*ListCacheEntriesResponse)(nil), // 1: api.ListCacheEntriesResponse
 	(*emptypb.Empty)(nil),            // 2: google.protobuf.Empty
 }
-var file_api_bgp_dns_proto_depIdxs = []int32{
+var file_proto_api_bgp_dns_proto_depIdxs = []int32{
 	2, // 0: api.BgpDnsService.ListCacheEntries:input_type -> google.protobuf.Empty
 	1, // 1: api.BgpDnsService.ListCacheEntries:output_type -> api.ListCacheEntriesResponse
 	1, // [1:2] is the sub-list for method output_type
@@ -199,26 +199,26 @@ var file_api_bgp_dns_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for field type_name
 }
 
-func init() { file_api_bgp_dns_proto_init() }
-func file_api_bgp_dns_proto_init() {
-	if File_api_bgp_dns_proto != nil {
+func init() { file_proto_api_bgp_dns_proto_init() }
+func file_proto_api_bgp_dns_proto_init() {
+	if File_proto_api_bgp_dns_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_bgp_dns_proto_rawDesc), len(file_api_bgp_dns_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_api_bgp_dns_proto_rawDesc), len(file_proto_api_bgp_dns_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_api_bgp_dns_proto_goTypes,
-		DependencyIndexes: file_api_bgp_dns_proto_depIdxs,
-		MessageInfos:      file_api_bgp_dns_proto_msgTypes,
+		GoTypes:           file_proto_api_bgp_dns_proto_goTypes,
+		DependencyIndexes: file_proto_api_bgp_dns_proto_depIdxs,
+		MessageInfos:      file_proto_api_bgp_dns_proto_msgTypes,
 	}.Build()
-	File_api_bgp_dns_proto = out.File
-	file_api_bgp_dns_proto_goTypes = nil
-	file_api_bgp_dns_proto_depIdxs = nil
+	File_proto_api_bgp_dns_proto = out.File
+	file_proto_api_bgp_dns_proto_goTypes = nil
+	file_proto_api_bgp_dns_proto_depIdxs = nil
 }

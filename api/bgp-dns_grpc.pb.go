@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             (unknown)
-// source: api/bgp-dns.proto
+// source: proto/api/bgp-dns.proto
 
 package api
 
@@ -121,5 +121,5 @@ var BgpDnsService_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
-	Metadata: "api/bgp-dns.proto",
+	Metadata: "proto/api/bgp-dns.proto",
 }
