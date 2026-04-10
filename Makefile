@@ -1,7 +1,7 @@
 all: bgp-dnsd bgp-dnsctl
 
 pb:
-	$(pushd proto && buf generate --clean || popd)
+	pushd proto && buf generate --clean || popd
 
 
 bgp-dnsd: clean pb
