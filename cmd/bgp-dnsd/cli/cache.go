@@ -97,7 +97,10 @@ func (CacheCliServiceImpl) ClearCache(ctx context.Context, req *api.ClearCacheRe
 	}
 	count, err := dns.ClearCache()
 	if err != nil {
-		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to clear cache: %v", err))
+		if err == dns.ENotInitialized {
+			return nil, status.Errorf(codes.FailedPrecondition, "failed to clear cache: %v", err)
+		}
+		return nil, status.Errorf(codes.Internal, "failed to clear cache: %v", err)
 	}
 	return &api.ClearCacheResponse{
 		ClearedCount: count,
