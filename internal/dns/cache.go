@@ -260,3 +260,23 @@ func (c *cache) dump(callback func(qtype uint16, fqdn string, fails uint64, ips 
 	}
 	return nil
 }
+
+func (c *cache) clear() uint64 {
+	c.L().Debug().Msg("Clearing all cache entries")
+	defer c.L().Debug().Msg("Clearing all cache entries done")
+
+	all := c.entries.GetALL(true)
+	for k := range all {
+		key, ok := k.(cacheKey)
+		if !ok {
+			c.L().Error().Msgf("Failed to clear cache entry: unexpected key type %T", k)
+			continue
+		}
+
+		if e := c.unregister(key); e != nil {
+			c.L().Error().Err(e).Msg("Failed to unregister cache entry during clear")
+		}
+	}
+
+	return uint64(len(all))
+}

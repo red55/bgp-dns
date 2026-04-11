@@ -93,3 +93,11 @@ func DumpCache(callback func(qtype uint16, fqdn string, fails uint64, ips []stri
 
 	return _cache.dump(callback)
 }
+
+func ClearCache() (uint64, error) {
+	if _cache == nil {
+		return 0, ENotInitialized
+	}
+
+	return _cache.clear(), nil
+}

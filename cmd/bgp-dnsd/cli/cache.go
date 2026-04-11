@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
@@ -88,6 +89,22 @@ func (CacheCliServiceImpl) ListCacheEntries(unused *emptypb.Empty, stream grpc.S
 		}
 		return stream.Send(&resp)
 	})
+}
+
+func (CacheCliServiceImpl) ClearCache(ctx context.Context, req *api.ClearCacheRequest) (*api.ClearCacheResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "request cannot be nil")
+	}
+	count, err := dns.ClearCache()
+	if err != nil {
+		if err == dns.ENotInitialized {
+			return nil, status.Errorf(codes.FailedPrecondition, "failed to clear cache: %v", err)
+		}
+		return nil, status.Errorf(codes.Internal, "failed to clear cache: %v", err)
+	}
+	return &api.ClearCacheResponse{
+		ClearedCount: count,
+	}, nil
 }
 
 func Shutdown(_app *app.Application) error {
