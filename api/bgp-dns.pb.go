@@ -22,42 +22,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type ListCacheEntriesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListCacheEntriesRequest) Reset() {
-	*x = ListCacheEntriesRequest{}
-	mi := &file_proto_api_bgp_dns_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListCacheEntriesRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListCacheEntriesRequest) ProtoMessage() {}
-
-func (x *ListCacheEntriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_api_bgp_dns_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListCacheEntriesRequest.ProtoReflect.Descriptor instead.
-func (*ListCacheEntriesRequest) Descriptor() ([]byte, []int) {
-	return file_proto_api_bgp_dns_proto_rawDescGZIP(), []int{0}
-}
-
 type ClearCacheRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -66,7 +30,7 @@ type ClearCacheRequest struct {
 
 func (x *ClearCacheRequest) Reset() {
 	*x = ClearCacheRequest{}
-	mi := &file_proto_api_bgp_dns_proto_msgTypes[1]
+	mi := &file_proto_api_bgp_dns_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -78,7 +42,7 @@ func (x *ClearCacheRequest) String() string {
 func (*ClearCacheRequest) ProtoMessage() {}
 
 func (x *ClearCacheRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_api_bgp_dns_proto_msgTypes[1]
+	mi := &file_proto_api_bgp_dns_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -91,7 +55,7 @@ func (x *ClearCacheRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClearCacheRequest.ProtoReflect.Descriptor instead.
 func (*ClearCacheRequest) Descriptor() ([]byte, []int) {
-	return file_proto_api_bgp_dns_proto_rawDescGZIP(), []int{1}
+	return file_proto_api_bgp_dns_proto_rawDescGZIP(), []int{0}
 }
 
 type ClearCacheResponse struct {
@@ -103,7 +67,7 @@ type ClearCacheResponse struct {
 
 func (x *ClearCacheResponse) Reset() {
 	*x = ClearCacheResponse{}
-	mi := &file_proto_api_bgp_dns_proto_msgTypes[2]
+	mi := &file_proto_api_bgp_dns_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -115,7 +79,7 @@ func (x *ClearCacheResponse) String() string {
 func (*ClearCacheResponse) ProtoMessage() {}
 
 func (x *ClearCacheResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_api_bgp_dns_proto_msgTypes[2]
+	mi := &file_proto_api_bgp_dns_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -128,7 +92,7 @@ func (x *ClearCacheResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClearCacheResponse.ProtoReflect.Descriptor instead.
 func (*ClearCacheResponse) Descriptor() ([]byte, []int) {
-	return file_proto_api_bgp_dns_proto_rawDescGZIP(), []int{2}
+	return file_proto_api_bgp_dns_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *ClearCacheResponse) GetClearedCount() uint64 {
@@ -136,6 +100,42 @@ func (x *ClearCacheResponse) GetClearedCount() uint64 {
 		return x.ClearedCount
 	}
 	return 0
+}
+
+type ListCacheEntriesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCacheEntriesRequest) Reset() {
+	*x = ListCacheEntriesRequest{}
+	mi := &file_proto_api_bgp_dns_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCacheEntriesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCacheEntriesRequest) ProtoMessage() {}
+
+func (x *ListCacheEntriesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_api_bgp_dns_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCacheEntriesRequest.ProtoReflect.Descriptor instead.
+func (*ListCacheEntriesRequest) Descriptor() ([]byte, []int) {
+	return file_proto_api_bgp_dns_proto_rawDescGZIP(), []int{2}
 }
 
 type ListCacheEntriesResponse struct {
@@ -234,11 +234,11 @@ var File_proto_api_bgp_dns_proto protoreflect.FileDescriptor
 
 const file_proto_api_bgp_dns_proto_rawDesc = "" +
 	"\n" +
-	"\x17proto/api/bgp-dns.proto\x12\x03api\x1a\x1bgoogle/protobuf/empty.proto\"\x19\n" +
-	"\x17ListCacheEntriesRequest\"\x15\n" +
-	"\x11ClearCacheRequest\"-\n" +
-	"\x12ClearCacheResponse\x12\x17\n" +
-	"\fcleared_count\x18\x01 \x01(\x04R\fclearedCount\"\xbe\x01\n" +
+	"\x17proto/api/bgp-dns.proto\x12\x03api\x1a\x1bgoogle/protobuf/empty.proto\"\x13\n" +
+	"\x11ClearCacheRequest\"9\n" +
+	"\x12ClearCacheResponse\x12#\n" +
+	"\rcleared_count\x18\x01 \x01(\x04R\fclearedCount\"\x19\n" +
+	"\x17ListCacheEntriesRequest\"\xbe\x01\n" +
 	"\x18ListCacheEntriesResponse\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x12\n" +
 	"\x04fqdn\x18\x02 \x01(\tR\x04fqdn\x12\x12\n" +
@@ -250,9 +250,9 @@ const file_proto_api_bgp_dns_proto_rawDesc = "" +
 	"\n" +
 	"expiration\x18\x06 \x01(\x03R\n" +
 	"expiration\x12\x14\n" +
-	"\x05fails\x18\a \x01(\x04R\x05fails2\x8a\x01\n" +
+	"\x05fails\x18\a \x01(\x04R\x05fails2\x9b\x01\n" +
 	"\rBgpDnsService\x12K\n" +
-	"\x10ListCacheEntries\x12\x16.google.protobuf.Empty\x1a\x1d.api.ListCacheEntriesResponse0\x01\x12,\n" +
+	"\x10ListCacheEntries\x12\x16.google.protobuf.Empty\x1a\x1d.api.ListCacheEntriesResponse0\x01\x12=\n" +
 	"\n" +
 	"ClearCache\x12\x16.api.ClearCacheRequest\x1a\x17.api.ClearCacheResponseB\"Z github.com/red55/bgp-dns/api;apib\x06proto3"
 
@@ -270,17 +270,17 @@ func file_proto_api_bgp_dns_proto_rawDescGZIP() []byte {
 
 var file_proto_api_bgp_dns_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_proto_api_bgp_dns_proto_goTypes = []any{
-	(*ListCacheEntriesRequest)(nil),  // 0: api.ListCacheEntriesRequest
-	(*ClearCacheRequest)(nil),        // 1: api.ClearCacheRequest
-	(*ClearCacheResponse)(nil),       // 2: api.ClearCacheResponse
+	(*ClearCacheRequest)(nil),        // 0: api.ClearCacheRequest
+	(*ClearCacheResponse)(nil),       // 1: api.ClearCacheResponse
+	(*ListCacheEntriesRequest)(nil),  // 2: api.ListCacheEntriesRequest
 	(*ListCacheEntriesResponse)(nil), // 3: api.ListCacheEntriesResponse
 	(*emptypb.Empty)(nil),            // 4: google.protobuf.Empty
 }
 var file_proto_api_bgp_dns_proto_depIdxs = []int32{
 	4, // 0: api.BgpDnsService.ListCacheEntries:input_type -> google.protobuf.Empty
-	1, // 1: api.BgpDnsService.ClearCache:input_type -> api.ClearCacheRequest
+	0, // 1: api.BgpDnsService.ClearCache:input_type -> api.ClearCacheRequest
 	3, // 2: api.BgpDnsService.ListCacheEntries:output_type -> api.ListCacheEntriesResponse
-	2, // 3: api.BgpDnsService.ClearCache:output_type -> api.ClearCacheResponse
+	1, // 3: api.BgpDnsService.ClearCache:output_type -> api.ClearCacheResponse
 	2, // [2:4] is the sub-list for method output_type
 	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name

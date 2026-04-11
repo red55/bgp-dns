@@ -56,6 +56,9 @@ func (c *bgpDnsServiceClient) ListCacheEntries(ctx context.Context, in *emptypb.
 	return x, nil
 }
 
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type BgpDnsService_ListCacheEntriesClient = grpc.ServerStreamingClient[ListCacheEntriesResponse]
+
 func (c *bgpDnsServiceClient) ClearCache(ctx context.Context, in *ClearCacheRequest, opts ...grpc.CallOption) (*ClearCacheResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ClearCacheResponse)
@@ -65,9 +68,6 @@ func (c *bgpDnsServiceClient) ClearCache(ctx context.Context, in *ClearCacheRequ
 	}
 	return out, nil
 }
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type BgpDnsService_ListCacheEntriesClient = grpc.ServerStreamingClient[ListCacheEntriesResponse]
 
 // BgpDnsServiceServer is the server API for BgpDnsService service.
 // All implementations must embed UnimplementedBgpDnsServiceServer
@@ -120,6 +120,9 @@ func _BgpDnsService_ListCacheEntries_Handler(srv interface{}, stream grpc.Server
 	return srv.(BgpDnsServiceServer).ListCacheEntries(m, &grpc.GenericServerStream[emptypb.Empty, ListCacheEntriesResponse]{ServerStream: stream})
 }
 
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type BgpDnsService_ListCacheEntriesServer = grpc.ServerStreamingServer[ListCacheEntriesResponse]
+
 func _BgpDnsService_ClearCache_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ClearCacheRequest)
 	if err := dec(in); err != nil {
@@ -137,9 +140,6 @@ func _BgpDnsService_ClearCache_Handler(srv interface{}, ctx context.Context, dec
 	}
 	return interceptor(ctx, in, info, handler)
 }
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type BgpDnsService_ListCacheEntriesServer = grpc.ServerStreamingServer[ListCacheEntriesResponse]
 
 // BgpDnsService_ServiceDesc is the grpc.ServiceDesc for BgpDnsService service.
 // It's only intended for direct use with grpc.RegisterService,
