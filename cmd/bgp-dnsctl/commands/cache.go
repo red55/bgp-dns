@@ -2,7 +2,6 @@ package commands
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -84,7 +83,7 @@ func newCacheClearCmd(_app *app.Application, client *api.BgpDnsServiceClient) *c
 			if err != nil {
 				return err
 			}
-			_, _ = os.Stdout.WriteString(fmt.Sprintf("Cleared %d cache entries.\n", resp.ClearedCount))
+			_app.L().Info().Msgf("Cleared %d cache entries.", resp.ClearedCount)
 			return nil
 		},
 	}

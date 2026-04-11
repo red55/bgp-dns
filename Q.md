@@ -1,6 +1,6 @@
 let's implement dns cache clearing command in `bgp-dnsctl`.
 the command should be called from shell as `bgp-dnsctl cache clear`.
-you have to implement corresponding functions in `internal/bgp` package. take a look on style how the `bgp-dnsctl cache list` was implemented.
+you have to implement corresponding functions in `internal/bgp` package. take a look on style how the `bgp-dnsctl cache list` was implemented. to print to stdout use logging infrastructure alredy which already exist in code.
 
 give me detailed plan on your implementation. each phase of plan should be a single git commit. commit and proceed to the next phase only after my confirmation.
 write unit test for code you implemented. run unit test in separate agent and separate git branch. if unit tests succeeded merge it into working branch.
