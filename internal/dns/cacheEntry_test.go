@@ -294,7 +294,6 @@ func TestNewCacheEntry_UpdateTtl(t *testing.T) {
 
 	// Expiration should be different from the old one (refreshed to current time)
 	if !ce.expiration.After(oldExpiration) || ce.expiration.Sub(oldExpiration) > 2*time.Second {
-		// It's OK if the expiration is very close to the old one, but it should have been recalculated
-		// from the current time, so it should be within a reasonable range
+		t.Errorf("expiration should be refreshed from current time within a reasonable range: old=%v, new=%v, delta=%v", oldExpiration, ce.expiration, ce.expiration.Sub(oldExpiration))
 	}
 }
