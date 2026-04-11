@@ -229,13 +229,15 @@ func TestCacheEntry_Ip6s_NoAAAA(t *testing.T) {
 	}
 }
 
-// TestMinTtl tests the minTtl function correctly calculates minimum TTL
-func TestMinTtl(t *testing.T) {
+// TestMinTtl_UsesHighestRecordTTLWithConfiguredMinimum verifies that minTtl
+// returns the highest TTL from the answer records unless the configured
+// minimum TTL is higher, in which case the configured minimum is used.
+func TestMinTtl_UsesHighestRecordTTLWithConfiguredMinimum(t *testing.T) {
 	fqdn := "example.com."
 	msg := new(dns.Msg)
 	msg.SetQuestion(fqdn, dns.TypeA)
 
-	// Add records with different TTLs
+	// Add records with different TTLs.
 	msg.Answer = append(msg.Answer, &dns.A{
 		Hdr: dns.RR_Header{
 			Name:   fqdn,
@@ -255,16 +257,18 @@ func TestMinTtl(t *testing.T) {
 		A: net.ParseIP("192.168.1.2"),
 	})
 
-	// When minTtl is less than all record TTLs, it should use the minimum from records
+	// When the configured minimum is below all record TTLs, the highest record
+	// TTL is used.
 	result := minTtl(msg, time.Duration(60))
 	if result != 200 {
-		t.Errorf("expected minTtl to be 200 (max of record TTLs when above min), got %d", result)
+		t.Errorf("expected minTtl to be 200 (highest record TTL when above configured minimum), got %d", result)
 	}
 
-	// When minTtl is greater than all record TTLs, it should use minTtl
+	// When the configured minimum is greater than all record TTLs, it overrides
+	// the record TTLs.
 	result = minTtl(msg, time.Duration(300))
 	if result != 300 {
-		t.Errorf("expected minTtl to be 300 (minTtl override), got %d", result)
+		t.Errorf("expected minTtl to be 300 (configured minimum override), got %d", result)
 	}
 }
 
