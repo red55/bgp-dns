@@ -79,7 +79,10 @@ func newCacheClearCmd(_app *app.Application, client *api.BgpDnsServiceClient) *c
 		Short: "Clear DNS cache entries",
 		Long:  "Clear all entries in the DNS cache and withdraw associated IPs from BGP peers.",
 		RunE: func(cmd *cobra.Command, args []string) (e error) {
-			resp, err := (*client).ClearCache(context.Background(), &api.ClearCacheRequest{})
+			ctx, cancel := context.WithTimeout(cmd.Context(), 30*time.Second)
+			defer cancel()
+
+			resp, err := (*client).ClearCache(ctx, &api.ClearCacheRequest{})
 			if err != nil {
 				return err
 			}
