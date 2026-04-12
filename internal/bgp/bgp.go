@@ -71,7 +71,7 @@ func (s *bgpSrv) find(prefixes []*bgpapi.IPAddressPrefix) (found *bgpapi.IPAddre
 		Prefixes:  tl,
 	}, func(dst *bgpapi.Destination) {
 		p1, _ := netip.ParsePrefix(dst.Prefix)
-		slices.IndexFunc(prefixes, func(prefix *bgpapi.IPAddressPrefix) bool {
+		_ = slices.IndexFunc(prefixes, func(prefix *bgpapi.IPAddressPrefix) bool {
 			p2, _ := netip.ParsePrefix(fmt.Sprintf("%s/%d", prefix.Prefix, prefix.PrefixLen))
 
 			if p1.Overlaps(p2) {
