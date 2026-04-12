@@ -48,6 +48,7 @@ func NewRootCmd(_app *app.Application) *cobra.Command {
 
 	cmd.AddCommand(
 		newCacheCmd(_app, &client),
+		newListCmd(_app, &client),
 	)
 
 	return cmd
