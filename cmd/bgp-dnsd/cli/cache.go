@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -22,11 +23,13 @@ type CacheCliServiceImpl struct {
 }
 
 var (
-	_cancel   func()
-	_listener net.Listener
+	_cancel    func()
+	_listener  net.Listener
+	_listFile  string
 )
 
-func Serve(_app *app.Application) (e error) {
+func Serve(_app *app.Application, listFile string) (e error) {
+	_listFile = listFile
 	var target string
 	var proto string
 
@@ -97,7 +100,7 @@ func (CacheCliServiceImpl) ClearCache(ctx context.Context, req *api.ClearCacheRe
 	}
 	count, err := dns.ClearCache()
 	if err != nil {
-		if err == dns.ENotInitialized {
+		if errors.Is(err, dns.ENotInitialized) {
 			return nil, status.Errorf(codes.FailedPrecondition, "failed to clear cache: %v", err)
 		}
 		return nil, status.Errorf(codes.Internal, "failed to clear cache: %v", err)
@@ -105,6 +108,19 @@ func (CacheCliServiceImpl) ClearCache(ctx context.Context, req *api.ClearCacheRe
 	return &api.ClearCacheResponse{
 		ClearedCount: count,
 	}, nil
+}
+
+func (CacheCliServiceImpl) ReloadList(ctx context.Context, req *api.ReloadListRequest) (*api.ReloadListResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "request cannot be nil")
+	}
+	if e := dns.Load(_listFile); e != nil {
+		if errors.Is(e, dns.ENotInitialized) {
+			return nil, status.Errorf(codes.FailedPrecondition, "failed to reload list: %v", e)
+		}
+		return nil, status.Errorf(codes.Internal, "failed to reload list: %v", e)
+	}
+	return &api.ReloadListResponse{}, nil
 }
 
 func Shutdown(_app *app.Application) error {

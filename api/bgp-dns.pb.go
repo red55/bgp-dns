@@ -230,6 +230,78 @@ func (x *ListCacheEntriesResponse) GetFails() uint64 {
 	return 0
 }
 
+type ReloadListRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReloadListRequest) Reset() {
+	*x = ReloadListRequest{}
+	mi := &file_proto_api_bgp_dns_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReloadListRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReloadListRequest) ProtoMessage() {}
+
+func (x *ReloadListRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_api_bgp_dns_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReloadListRequest.ProtoReflect.Descriptor instead.
+func (*ReloadListRequest) Descriptor() ([]byte, []int) {
+	return file_proto_api_bgp_dns_proto_rawDescGZIP(), []int{4}
+}
+
+type ReloadListResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReloadListResponse) Reset() {
+	*x = ReloadListResponse{}
+	mi := &file_proto_api_bgp_dns_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReloadListResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReloadListResponse) ProtoMessage() {}
+
+func (x *ReloadListResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_api_bgp_dns_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReloadListResponse.ProtoReflect.Descriptor instead.
+func (*ReloadListResponse) Descriptor() ([]byte, []int) {
+	return file_proto_api_bgp_dns_proto_rawDescGZIP(), []int{5}
+}
+
 var File_proto_api_bgp_dns_proto protoreflect.FileDescriptor
 
 const file_proto_api_bgp_dns_proto_rawDesc = "" +
@@ -250,11 +322,15 @@ const file_proto_api_bgp_dns_proto_rawDesc = "" +
 	"\n" +
 	"expiration\x18\x06 \x01(\x03R\n" +
 	"expiration\x12\x14\n" +
-	"\x05fails\x18\a \x01(\x04R\x05fails2\x9b\x01\n" +
+	"\x05fails\x18\a \x01(\x04R\x05fails\"\x13\n" +
+	"\x11ReloadListRequest\"\x14\n" +
+	"\x12ReloadListResponse2\xda\x01\n" +
 	"\rBgpDnsService\x12K\n" +
 	"\x10ListCacheEntries\x12\x16.google.protobuf.Empty\x1a\x1d.api.ListCacheEntriesResponse0\x01\x12=\n" +
 	"\n" +
-	"ClearCache\x12\x16.api.ClearCacheRequest\x1a\x17.api.ClearCacheResponseB\"Z github.com/red55/bgp-dns/api;apib\x06proto3"
+	"ClearCache\x12\x16.api.ClearCacheRequest\x1a\x17.api.ClearCacheResponse\x12=\n" +
+	"\n" +
+	"ReloadList\x12\x16.api.ReloadListRequest\x1a\x17.api.ReloadListResponseB\"Z github.com/red55/bgp-dns/api;apib\x06proto3"
 
 var (
 	file_proto_api_bgp_dns_proto_rawDescOnce sync.Once
@@ -268,21 +344,25 @@ func file_proto_api_bgp_dns_proto_rawDescGZIP() []byte {
 	return file_proto_api_bgp_dns_proto_rawDescData
 }
 
-var file_proto_api_bgp_dns_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_proto_api_bgp_dns_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_proto_api_bgp_dns_proto_goTypes = []any{
 	(*ClearCacheRequest)(nil),        // 0: api.ClearCacheRequest
 	(*ClearCacheResponse)(nil),       // 1: api.ClearCacheResponse
 	(*ListCacheEntriesRequest)(nil),  // 2: api.ListCacheEntriesRequest
 	(*ListCacheEntriesResponse)(nil), // 3: api.ListCacheEntriesResponse
-	(*emptypb.Empty)(nil),            // 4: google.protobuf.Empty
+	(*ReloadListRequest)(nil),        // 4: api.ReloadListRequest
+	(*ReloadListResponse)(nil),       // 5: api.ReloadListResponse
+	(*emptypb.Empty)(nil),            // 6: google.protobuf.Empty
 }
 var file_proto_api_bgp_dns_proto_depIdxs = []int32{
-	4, // 0: api.BgpDnsService.ListCacheEntries:input_type -> google.protobuf.Empty
+	6, // 0: api.BgpDnsService.ListCacheEntries:input_type -> google.protobuf.Empty
 	0, // 1: api.BgpDnsService.ClearCache:input_type -> api.ClearCacheRequest
-	3, // 2: api.BgpDnsService.ListCacheEntries:output_type -> api.ListCacheEntriesResponse
-	1, // 3: api.BgpDnsService.ClearCache:output_type -> api.ClearCacheResponse
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
+	4, // 2: api.BgpDnsService.ReloadList:input_type -> api.ReloadListRequest
+	3, // 3: api.BgpDnsService.ListCacheEntries:output_type -> api.ListCacheEntriesResponse
+	1, // 4: api.BgpDnsService.ClearCache:output_type -> api.ClearCacheResponse
+	5, // 5: api.BgpDnsService.ReloadList:output_type -> api.ReloadListResponse
+	3, // [3:6] is the sub-list for method output_type
+	0, // [0:3] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -299,7 +379,7 @@ func file_proto_api_bgp_dns_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_api_bgp_dns_proto_rawDesc), len(file_proto_api_bgp_dns_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
