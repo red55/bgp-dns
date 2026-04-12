@@ -62,7 +62,7 @@ func main() {
 		}
 	}()
 
-	if e = cli.Serve(_app); e != nil {
+	if e = cli.Serve(_app, cfg.Dns.List.File); e != nil {
 		panic(e)
 	}
 	defer func() {

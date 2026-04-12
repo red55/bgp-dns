@@ -22,11 +22,13 @@ type CacheCliServiceImpl struct {
 }
 
 var (
-	_cancel   func()
-	_listener net.Listener
+	_cancel    func()
+	_listener  net.Listener
+	_listFile  string
 )
 
-func Serve(_app *app.Application) (e error) {
+func Serve(_app *app.Application, listFile string) (e error) {
+	_listFile = listFile
 	var target string
 	var proto string
 
@@ -105,6 +107,16 @@ func (CacheCliServiceImpl) ClearCache(ctx context.Context, req *api.ClearCacheRe
 	return &api.ClearCacheResponse{
 		ClearedCount: count,
 	}, nil
+}
+
+func (CacheCliServiceImpl) ReloadList(ctx context.Context, req *api.ReloadListRequest) (*api.ReloadListResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "request cannot be nil")
+	}
+	if e := dns.Load(_listFile); e != nil {
+		return nil, status.Errorf(codes.Internal, "failed to reload list: %v", e)
+	}
+	return &api.ReloadListResponse{}, nil
 }
 
 func Shutdown(_app *app.Application) error {
