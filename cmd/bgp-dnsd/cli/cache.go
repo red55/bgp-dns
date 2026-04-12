@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -114,6 +115,9 @@ func (CacheCliServiceImpl) ReloadList(ctx context.Context, req *api.ReloadListRe
 		return nil, status.Error(codes.InvalidArgument, "request cannot be nil")
 	}
 	if e := dns.Load(_listFile); e != nil {
+		if errors.Is(e, dns.ENotInitialized) {
+			return nil, status.Errorf(codes.FailedPrecondition, "failed to reload list: %v", e)
+		}
 		return nil, status.Errorf(codes.Internal, "failed to reload list: %v", e)
 	}
 	return &api.ReloadListResponse{}, nil
