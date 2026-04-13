@@ -22,6 +22,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	BgpDnsService_ListCacheEntries_FullMethodName = "/api.BgpDnsService/ListCacheEntries"
 	BgpDnsService_ClearCache_FullMethodName       = "/api.BgpDnsService/ClearCache"
+	BgpDnsService_ReloadList_FullMethodName       = "/api.BgpDnsService/ReloadList"
 )
 
 // BgpDnsServiceClient is the client API for BgpDnsService service.
@@ -30,6 +31,7 @@ const (
 type BgpDnsServiceClient interface {
 	ListCacheEntries(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ListCacheEntriesResponse], error)
 	ClearCache(ctx context.Context, in *ClearCacheRequest, opts ...grpc.CallOption) (*ClearCacheResponse, error)
+	ReloadList(ctx context.Context, in *ReloadListRequest, opts ...grpc.CallOption) (*ReloadListResponse, error)
 }
 
 type bgpDnsServiceClient struct {
@@ -69,12 +71,23 @@ func (c *bgpDnsServiceClient) ClearCache(ctx context.Context, in *ClearCacheRequ
 	return out, nil
 }
 
+func (c *bgpDnsServiceClient) ReloadList(ctx context.Context, in *ReloadListRequest, opts ...grpc.CallOption) (*ReloadListResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReloadListResponse)
+	err := c.cc.Invoke(ctx, BgpDnsService_ReloadList_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BgpDnsServiceServer is the server API for BgpDnsService service.
 // All implementations must embed UnimplementedBgpDnsServiceServer
 // for forward compatibility.
 type BgpDnsServiceServer interface {
 	ListCacheEntries(*emptypb.Empty, grpc.ServerStreamingServer[ListCacheEntriesResponse]) error
 	ClearCache(context.Context, *ClearCacheRequest) (*ClearCacheResponse, error)
+	ReloadList(context.Context, *ReloadListRequest) (*ReloadListResponse, error)
 	mustEmbedUnimplementedBgpDnsServiceServer()
 }
 
@@ -90,6 +103,9 @@ func (UnimplementedBgpDnsServiceServer) ListCacheEntries(*emptypb.Empty, grpc.Se
 }
 func (UnimplementedBgpDnsServiceServer) ClearCache(context.Context, *ClearCacheRequest) (*ClearCacheResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClearCache not implemented")
+}
+func (UnimplementedBgpDnsServiceServer) ReloadList(context.Context, *ReloadListRequest) (*ReloadListResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReloadList not implemented")
 }
 func (UnimplementedBgpDnsServiceServer) mustEmbedUnimplementedBgpDnsServiceServer() {}
 func (UnimplementedBgpDnsServiceServer) testEmbeddedByValue()                       {}
@@ -141,6 +157,24 @@ func _BgpDnsService_ClearCache_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BgpDnsService_ReloadList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReloadListRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BgpDnsServiceServer).ReloadList(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BgpDnsService_ReloadList_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BgpDnsServiceServer).ReloadList(ctx, req.(*ReloadListRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // BgpDnsService_ServiceDesc is the grpc.ServiceDesc for BgpDnsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -151,6 +185,10 @@ var BgpDnsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ClearCache",
 			Handler:    _BgpDnsService_ClearCache_Handler,
+		},
+		{
+			MethodName: "ReloadList",
+			Handler:    _BgpDnsService_ReloadList_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

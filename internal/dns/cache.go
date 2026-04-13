@@ -273,7 +273,7 @@ func (c *cache) clear() uint64 {
 			continue
 		}
 
-		if e := c.unregister(key); e != nil {
+		if e := c.unregister(key.fqdn); e != nil {
 			c.L().Error().Err(e).Msg("Failed to unregister cache entry during clear")
 		}
 	}

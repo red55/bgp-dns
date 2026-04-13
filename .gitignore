@@ -25,3 +25,6 @@ dist/
 bgp-dnsd
 !cmd/*
 /bgp-dnsctl
+
+# Git worktrees
+.worktrees/
