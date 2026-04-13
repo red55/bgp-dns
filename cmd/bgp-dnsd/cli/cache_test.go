@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/red55/bgp-dns/api"
@@ -17,8 +19,13 @@ func TestReloadList_NilRequest(t *testing.T) {
 }
 
 func TestReloadList_UninitializedCache(t *testing.T) {
-	// Set a valid list file path — cache won't be initialized in unit tests
-	_listFile = "/tmp/test-list.lst"
+	// Create a temporary list file to avoid OS/environment-dependent paths
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "test-list.lst")
+	if err := os.WriteFile(tmpFile, []byte{}, 0600); err != nil {
+		t.Fatalf("failed to create temp list file: %v", err)
+	}
+	_listFile = tmpFile
 
 	s := &CacheCliServiceImpl{}
 	_, err := s.ReloadList(nil, &api.ReloadListRequest{})
