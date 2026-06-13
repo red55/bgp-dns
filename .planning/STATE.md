@@ -1,3 +1,17 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: unknown
+last_updated: "2026-06-13T16:49:46.917Z"
+progress:
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 3
+  completed_plans: 2
+  percent: 0
+---
+
 # bgp-dns — Project State
 
 **Created:** 2026-06-13
@@ -23,17 +37,20 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 ## Project Memory
 
 ### Decisions
+
 - **2026-06-13:** Brownfield project — codebase already mapped, spike 001 (regex domainlist) validated
 - **2026-06-13:** YOLO mode — auto-approve requirements and roadmap
 - **2026-06-13:** Standard granularity — 5 phases, balanced scope per phase
 - **2026-06-13:** Phase 1 decisions captured — regex: prefix syntax, wildcards included, load-time validation, skip+warn on invalid, work within globals
 
 ### Risks
+
 - **Global state** — Heavy package-level singletons make testing difficult; Phase 3 addresses this
 - **No BGP tests** — Reference counting logic is critical but untested; Phase 2 prioritizes this
 - **Spike findings in `.opencode/`** — regexServeMux blueprint exists but needs implementation review
 
 ### Lessons
+
 - Spike 001 validated that custom regexServeMux works with miekg/dns — no need to fork or patch
 - O(n²) set difference in `internal/utils/main.go` is a known performance concern
 - gRPC has no authentication — Unix socket permissions are the only mitigation

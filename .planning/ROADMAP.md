@@ -6,7 +6,7 @@
 
 | Phase | Name | Requirements | Depends On |
 |-------|------|--------------|------------|
-| 1 | Regex Domainlist | REGEX-01–05 | — |
+| 1 | 2/3 | In Progress|  |
 | 2 | Test Suite | TEST-01–05 | — |
 | 3 | Dependency Injection | REFACTOR-01–04 | Phase 2 |
 | 4 | Reliability | RELIAB-01–04 | Phase 3 |
@@ -21,6 +21,7 @@
 **Requirements:** REGEX-01, REGEX-02, REGEX-03, REGEX-04, REGEX-05
 
 **Success Criteria:**
+
 1. Domainlist file accepts `regex:([a-z]+)\.internal\.corp` syntax and compiles pattern at load time
 2. DNS queries for regex-matched domains resolve correctly and trigger BGP announcements
 3. Existing exact-match entries continue to work without performance regression (<1ms query latency increase)
@@ -28,6 +29,14 @@
 5. Spike 001 regexServeMux blueprint implemented in `internal/dns/`
 
 **SPIKE FINDINGS:** `.opencode/skills/spike-findings-bgp-dns/SKILL.md` — regexServeMux validated with 9/9 tests. Use `regex:` prefix syntax. Priority: exact > wildcard > regex > catch-all.
+
+**Plans:** 2/3 plans executed
+
+Plans:
+
+- [x] 01-01-PLAN.md — Create regexServeMux struct with priority routing and 12 unit tests
+- [x] 01-02-PLAN.md — Wire mux into cache and main.go, replace global dns.HandleFunc calls
+- [ ] 01-03-PLAN.md — Integration tests for regex domainlist loading and routing
 
 ---
 
@@ -38,6 +47,7 @@
 **Requirements:** TEST-01, TEST-02, TEST-03, TEST-04, TEST-05
 
 **Success Criteria:**
+
 1. `internal/bgp/` has tests covering reference counting (advance/withdraw transitions, multi-domain IP sharing)
 2. `internal/dns/resolvers.go` has tests for ring failover, health tracking, round-robin selection
 3. `internal/dns/cache.go` has tests for generation-based eviction, TTL expiration, capacity limits
@@ -55,6 +65,7 @@
 **Requirements:** REFACTOR-01, REFACTOR-02, REFACTOR-03, REFACTOR-04
 
 **Success Criteria:**
+
 1. All subsystem constructors (`dns.New()`, `bgp.New()`, `fswatcher.New()`) accept explicit dependencies
 2. Context config uses typed key (`type configKey struct{}`) instead of string `"cfg"`
 3. Startup failures return errors instead of panicking; main.go handles errors gracefully
@@ -71,6 +82,7 @@
 **Requirements:** RELIAB-01, RELIAB-02, RELIAB-03, RELIAB-04
 
 **Success Criteria:**
+
 1. DNS queries use `dns.Client{Timeout: 5s}` (configurable via `Dns.Timeouts.Query` in YAML)
 2. `internal/utils/main.go` set difference uses map-based O(n) implementation
 3. BGP operations use context from daemon lifecycle (cancellable on shutdown)
@@ -87,6 +99,7 @@
 **Requirements:** SEC-01, SEC-02, SEC-03, SEC-04
 
 **Success Criteria:**
+
 1. gRPC Unix socket created with mode 0600 (owner-only read/write)
 2. DNS handler filters query types: only A, AAAA, HTTPS, NXDOMAIN for listed domains
 3. BGP peer config struct includes optional `AuthPassword` field passed to GoBGP
