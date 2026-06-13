@@ -14,7 +14,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 
 | Phase | Name | Status | Plans | Progress |
 |-------|------|--------|-------|----------|
-| 1 | Regex Domainlist | ○ | 0/0 | 0% |
+| 1 | Regex Domainlist | ● | 0/0 | Context ✓ |
 | 2 | Test Suite | ○ | 0/0 | 0% |
 | 3 | Dependency Injection | ○ | 0/0 | 0% |
 | 4 | Reliability | ○ | 0/0 | 0% |
@@ -26,6 +26,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 - **2026-06-13:** Brownfield project — codebase already mapped, spike 001 (regex domainlist) validated
 - **2026-06-13:** YOLO mode — auto-approve requirements and roadmap
 - **2026-06-13:** Standard granularity — 5 phases, balanced scope per phase
+- **2026-06-13:** Phase 1 decisions captured — regex: prefix syntax, wildcards included, load-time validation, skip+warn on invalid, work within globals
 
 ### Risks
 - **Global state** — Heavy package-level singletons make testing difficult; Phase 3 addresses this
