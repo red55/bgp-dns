@@ -90,7 +90,7 @@ func (m *regexServeMux) HandleRemove(pattern string) {
 		return
 	}
 
-	delete(m.exact, pattern)
+	delete(m.exact, dns.CanonicalName(pattern))
 }
 
 // SetCatchAll sets the fallback handler that is invoked when no other
@@ -131,17 +131,20 @@ func (m *regexServeMux) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	canonical := strings.TrimSuffix(question, ".")
+	// exact map keys use dns.CanonicalName (trailing dot), so use question as-is
+	// for exact lookup. For wildcard/regex we strip the trailing dot.
+	exactKey := question // e.g. "example.com."
 
 	// 1. Exact match
-	if handler, ok := m.exact[canonical]; ok {
+	if handler, ok := m.exact[exactKey]; ok {
 		handler(w, r)
 		return
 	}
 
 	// 2. Wildcard match
+	canonical := strings.TrimSuffix(question, ".")
 	for _, wc := range m.wildcard {
-		if strings.HasSuffix(canonical, wc.prefix+".") {
+		if strings.HasSuffix(canonical, "."+wc.prefix) {
 			wc.handler(w, r)
 			return
 		}
