@@ -7,11 +7,11 @@
 
 ### Regex Domainlist Support
 
-- [ ] **REGEX-01**: Daemon accepts regex patterns in domainlist file using `regex:` prefix syntax
-- [ ] **REGEX-02**: DNS query matching priority: exact FQDN > wildcard > regex > catch-all proxy
-- [ ] **REGEX-03**: Regex patterns are compiled at domainlist load time, not per-query
-- [ ] **REGEX-04**: Invalid regex patterns are rejected immediately with clear error message
-- [ ] **REGEX-05**: Existing exact-match and wildcard entries continue to work without performance regression
+- [x] **REGEX-01**: Daemon accepts regex patterns in domainlist file using `regex:` prefix syntax
+- [x] **REGEX-02**: DNS query matching priority: exact FQDN > wildcard > regex > catch-all proxy
+- [x] **REGEX-03**: Regex patterns are compiled at domainlist load time, not per-query
+- [x] **REGEX-04**: Invalid regex patterns are rejected immediately with clear error message
+- [x] **REGEX-05**: Existing exact-match and wildcard entries continue to work without performance regression
 
 ### Test Coverage
 
@@ -77,11 +77,11 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REGEX-01 | Phase 1 | Pending |
-| REGEX-02 | Phase 1 | Pending |
-| REGEX-03 | Phase 1 | Pending |
-| REGEX-04 | Phase 1 | Pending |
-| REGEX-05 | Phase 1 | Pending |
+| REGEX-01 | Phase 1 | Complete |
+| REGEX-02 | Phase 1 | Complete |
+| REGEX-03 | Phase 1 | Complete |
+| REGEX-04 | Phase 1 | Complete |
+| REGEX-05 | Phase 1 | Complete |
 | TEST-01 | Phase 2 | Pending |
 | TEST-02 | Phase 2 | Pending |
 | TEST-03 | Phase 2 | Pending |
