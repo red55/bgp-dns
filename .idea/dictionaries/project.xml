@@ -2,6 +2,7 @@
   <dictionary name="project">
     <words>
       <w>protocolbuffers</w>
+      <w>qtype</w>
     </words>
   </dictionary>
 </component>
