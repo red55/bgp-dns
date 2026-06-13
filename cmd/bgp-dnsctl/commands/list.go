@@ -32,7 +32,14 @@ func newListReloadCmd(_app *app.Application, client *api.BgpDnsServiceClient) *c
 		Short: "Reload the domain list file",
 		Long:  "Trigger the daemon to reload the configured domain list file.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx, cancel := context.WithTimeout(cmd.Context(), 30*time.Second)
+			var ctx context.Context
+			var cancel context.CancelFunc
+
+			if _app.UnderDebugger {
+				ctx, cancel = context.WithCancel(cmd.Context())
+			} else {
+				ctx, cancel = context.WithTimeout(cmd.Context(), 30*time.Second)
+			}
 			defer cancel()
 
 			_, err := (*client).ReloadList(ctx, &api.ReloadListRequest{})

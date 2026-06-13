@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/red55/bgp-dns/internal/debugdetect"
 	"github.com/red55/bgp-dns/internal/log"
 	"github.com/rs/zerolog"
 )
@@ -22,7 +23,8 @@ type GlobalFlags struct {
 }
 type Application struct {
 	log.Log
-	Flags *GlobalFlags
+	Flags         *GlobalFlags
+	UnderDebugger bool
 }
 
 func DefaultTarget() string {
@@ -43,11 +45,13 @@ func DefaultTarget() string {
 
 func New(module string, defaultLogLevel zerolog.Level) *Application {
 	log.Init(defaultLogLevel)
+	debuggerPresent, _ := debugdetect.UnderDebugger()
 	return &Application{
 		Log: log.NewLog(log.L(), module),
 		Flags: &GlobalFlags{
 			Target: DefaultTarget(),
 		},
+		UnderDebugger: debuggerPresent,
 	}
 }
 
