@@ -30,6 +30,7 @@ type cache struct {
 	rs      *resolvers
 	minTtl  time.Duration
 	gen     atomic.Uint64
+	mux     *regexServeMux
 }
 
 func newCache(max int, minTtl time.Duration, rs *resolvers, l *zerolog.Logger) (r *cache) {
@@ -42,6 +43,7 @@ func newCache(max int, minTtl time.Duration, rs *resolvers, l *zerolog.Logger) (
 		gen:    atomic.Uint64{},
 	}
 	r.entries = gcache.New(max).LFU().EvictedFunc(r.onEntryEvicted).Build()
+	r.mux = newRegexServeMux()
 
 	return
 }
@@ -134,23 +136,44 @@ func (c *cache) findKeysByGeneration(gen uint64) []string {
 var requestTypes = []uint16{dns.TypeA, dns.TypeHTTPS}
 
 func (c *cache) register(fqdn string) error {
+	return c.registerOn(fqdn, c.mux, true)
+}
+
+func (c *cache) registerOn(fqdn string, targetMux *regexServeMux, doLookup bool) error {
 	if len(fqdn) < 2 {
 		return fmt.Errorf("'%s'. %w", fqdn, EInvalidFQDN)
 	}
 	cn := dns.CanonicalName(fqdn)
-	dns.HandleFunc(cn, func(rw dns.ResponseWriter, m *dns.Msg) {
+	targetMux.HandleFunc(cn, func(rw dns.ResponseWriter, m *dns.Msg) {
 		c.resolve(rw, m, true)
 	})
-
-	q := new(dns.Msg)
-	for _, t := range requestTypes {
-		q.SetQuestion(cn, t)
-		// resolve will call cache.upsert on resolved IPs
-		c.resolve(nil, q, false)
+	if doLookup {
+		q := new(dns.Msg)
+		for _, t := range requestTypes {
+			q.SetQuestion(cn, t)
+			c.resolve(nil, q, false)
+		}
 	}
-
 	return nil
 }
+
+func (c *cache) SetMux(m *regexServeMux) {
+	c.mux = m
+}
+
+func (c *cache) registerRegex(pattern string) error {
+	return c.mux.HandleRegex(pattern, func(w dns.ResponseWriter, r *dns.Msg) {
+		c.resolve(w, r, true)
+	})
+}
+
+func (c *cache) registerRegexOn(fqdn string, targetMux *regexServeMux) error {
+	pattern := strings.TrimPrefix(fqdn, "regex:")
+	return targetMux.HandleRegex(pattern, func(w dns.ResponseWriter, r *dns.Msg) {
+		c.resolve(w, r, true)
+	})
+}
+
 func (c *cache) get(fqdn string, qtype uint16) *cacheEntry {
 	ce, _ := c.entries.Get(newCacheKey(fqdn, qtype))
 	if ce == nil {
@@ -173,7 +196,7 @@ func (c *cache) unregister(fqdn string) error {
 	}
 	cn := dns.CanonicalName(fqdn)
 	c.L().Debug().Msgf("Unregistering %s", cn)
-	dns.HandleRemove(cn)
+	c.mux.HandleRemove(cn)
 
 	var kr []cacheKey
 	for _, k := range c.entries.Keys(true) {
@@ -203,25 +226,41 @@ func (c *cache) load(fn string) error {
 		}
 	}(f)
 
-	scanner := bufio.NewScanner(f)
-	oldGeneration := c.generation()
+	// SAFE RELOAD: increment generation BEFORE loading entries so new
+	// entries are tagged with the current generation and won't be
+	// evicted by the old-generation sweep.
+	oldGen := c.generation()
 	_ = c.increaseGeneration()
 
+	// Build on a temporary mux first; swap only on success.
+	tempMux := newRegexServeMux()
+
+	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		fqdn := strings.TrimSpace(scanner.Text())
-		if len(fqdn) == 0 {
+		line := strings.TrimSpace(scanner.Text())
+		if len(line) == 0 {
 			continue
 		}
-		if fqdn[0] == '#' || fqdn[0] == ';' {
+		if line[0] == '#' || line[0] == ';' {
 			continue
-		}
-		if e = c.register(fqdn); e != nil {
-			return e
 		}
 
+		if strings.HasPrefix(line, "regex:") {
+			if e = c.registerRegexOn(line, tempMux); e != nil {
+				c.L().Warn().Msgf("Skipping invalid regex pattern %q: %v", strings.TrimPrefix(line, "regex:"), e)
+				continue
+			}
+		} else {
+			if e = c.registerOn(line, tempMux, false); e != nil {
+				return e
+			}
+		}
 	}
 
-	return c.evictByGeneration(oldGeneration)
+	// All registrations succeeded — atomically swap mux
+	c.mux = tempMux
+
+	return c.evictByGeneration(oldGen)
 }
 
 func (c *cache) evictByGeneration(gen uint64) error {
