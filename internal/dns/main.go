@@ -35,6 +35,9 @@ func Serve(ctx context.Context) (e error) {
 
 	_resolvers = newResolvers(cfg.Dns.Resolvers)
 	_cache = newCache(cfg.Dns.Cache.MaxEntries, cfg.Dns.Cache.MinTtl, newResolvers(cfg.Dns.List.Resolvers), log.L())
+	mux := newRegexServeMux()
+	_cache.SetMux(mux)
+	mux.SetCatchAll(_resolvers.proxyQuery)
 	e = _cache.serve(ctx)
 
 	go func(c context.Context) {
@@ -42,11 +45,11 @@ func Serve(ctx context.Context) (e error) {
 			Addr:      fmt.Sprintf("%s:%d", cfg.Dns.Listen.IP.String(), cfg.Dns.Listen.Port),
 			Net:       "udp",
 			ReusePort: true,
+			Handler:   mux,
 		}
 		_wg.Add(1)
 		defer _wg.Done()
 
-		dns.HandleFunc(".", _resolvers.proxyQuery)
 		if err := _server.ListenAndServe(); err != nil {
 			log.L().Fatal().Str("m", "dns").Err(err).Msg("Failed to bind DNS resolver")
 		}
@@ -56,7 +59,7 @@ func Serve(ctx context.Context) (e error) {
 }
 
 func Shutdown(ctx context.Context) error {
-	dns.HandleRemove(".")
+	_cache.mux.clear()
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer func() {
 		cancel()
