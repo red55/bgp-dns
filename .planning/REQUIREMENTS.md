@@ -15,8 +15,8 @@
 
 ### Test Coverage
 
-- [ ] **TEST-01**: BGP reference counting logic has unit tests (advance/withdraw transitions)
-- [ ] **TEST-02**: DNS resolver ring failover has unit tests (round-robin, health tracking)
+- [x] **TEST-01**: BGP reference counting logic has unit tests (advance/withdraw transitions)
+- [x] **TEST-02**: DNS resolver ring failover has unit tests (round-robin, health tracking)
 - [ ] **TEST-03**: Cache eviction on generation change has unit tests
 - [ ] **TEST-04**: gRPC server lifecycle (Serve/Shutdown) has integration tests
 - [ ] **TEST-05**: End-to-end DNS query → cache → BGP announcement flow has integration test
@@ -82,8 +82,8 @@
 | REGEX-03 | Phase 1 | Complete |
 | REGEX-04 | Phase 1 | Complete |
 | REGEX-05 | Phase 1 | Complete |
-| TEST-01 | Phase 2 | Pending |
-| TEST-02 | Phase 2 | Pending |
+| TEST-01 | Phase 2 | Complete |
+| TEST-02 | Phase 2 | Complete |
 | TEST-03 | Phase 2 | Pending |
 | TEST-04 | Phase 2 | Pending |
 | TEST-05 | Phase 2 | Pending |
@@ -101,6 +101,7 @@
 | SEC-04 | Phase 5 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 22 total
 - Mapped to phases: 22
 - Unmapped: 0 ✓
