@@ -127,6 +127,16 @@ None - no external service configuration required.
 - gRPC lifecycle tests complete and passing
 - Ready for Phase 02 Plan 03 or Phase 03 (Dependency Injection)
 
+## Self-Check: PASSED
+- `internal/dns/cache_eviction_test.go` exists with 5 test functions ✅
+- `cmd/bgp-dnsd/cli/grpc_lifecycle_test.go` exists with 6 test functions ✅
+- All tests pass with `go test ./internal/dns/ ./cmd/bgp-dnsd/cli/ -count=1` ✅
+- Generation-based eviction verified through mux registration state ✅
+- gRPC error codes match expected values (InvalidArgument, FailedPrecondition) ✅
+- No `t.Parallel()` used in tests touching shared globals ✅
+- All 3 commits present (2 test, 1 feat) ✅
+- No untracked files in .planning/ ✅
+
 ---
 *Phase: 02-test-suite*
 *Completed: 2026-06-14*
