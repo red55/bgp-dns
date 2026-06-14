@@ -38,6 +38,9 @@ func (s *bgpSrv) add(prefix *bgpapi.IPAddressPrefix, asn uint32) error {
 	if prefix == nil {
 		return fmt.Errorf("prefix is nil")
 	}
+	if s.bgp == nil {
+		return nil
+	}
 
 	s.L().Info().Msgf("Adding prefix: %s", prefix.String())
 	//TODO: pass context
@@ -91,6 +94,9 @@ func (s *bgpSrv) find(prefixes []*bgpapi.IPAddressPrefix) (found *bgpapi.IPAddre
 func (s *bgpSrv) remove(prefix *bgpapi.IPAddressPrefix, asn uint32) error {
 	if prefix == nil {
 		return fmt.Errorf("prefix is nil")
+	}
+	if s.bgp == nil {
+		return nil
 	}
 
 	found, _ := s.find([]*bgpapi.IPAddressPrefix{prefix})
