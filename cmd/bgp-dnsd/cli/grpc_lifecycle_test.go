@@ -62,9 +62,16 @@ func TestGRPC_ServeShutdown(t *testing.T) {
 	assert.Equal(t, codes.FailedPrecondition, st.Code(), "ClearCache should return FailedPrecondition when cache not initialized")
 
 	// ReloadList with nil request should return InvalidArgument
+	// Note: gRPC serializes nil proto messages to empty messages,
+	// so ReloadList(nil) through gRPC client returns FailedPrecondition
+	// (cache not initialized) rather than InvalidArgument.
+	// The nil-check is verified directly in TestGRPC_ReloadList_NilRequest.
 	_, err = client.ReloadList(context.Background(), nil)
 	st, _ = status.FromError(err)
-	assert.Equal(t, codes.InvalidArgument, st.Code(), "ReloadList should return InvalidArgument for nil request")
+	// Through gRPC: nil → empty message → FailedPrecondition (cache not init)
+	// Direct call: nil → InvalidArgument (nil check)
+	assert.Contains(t, []codes.Code{codes.InvalidArgument, codes.FailedPrecondition}, st.Code(),
+		"ReloadList should return InvalidArgument (direct nil) or FailedPrecondition (gRPC serializes nil)")
 }
 
 // TestGRPC_ListCacheEntries_Uninitialized verifies that ListCacheEntries
@@ -105,16 +112,11 @@ func TestGRPC_ClearCache_Uninitialized(t *testing.T) {
 
 // TestGRPC_ReloadList_NilRequest verifies that ReloadList returns
 // InvalidArgument when the request is nil.
+// Note: gRPC clients serialize nil proto messages to empty messages,
+// so we test this by calling the service method directly.
 func TestGRPC_ReloadList_NilRequest(t *testing.T) {
-	_, addr, _ := newTestGRPCLifecycle(t)
-
-	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	require.NoError(t, err)
-	defer conn.Close()
-
-	client := api.NewBgpDnsServiceClient(conn)
-
-	_, err = client.ReloadList(context.Background(), nil)
+	s := &CacheCliServiceImpl{}
+	_, err := s.ReloadList(context.Background(), nil)
 	st, ok := status.FromError(err)
 	require.True(t, ok, "error should be a gRPC status error")
 	assert.Equal(t, codes.InvalidArgument, st.Code(), "ReloadList should return InvalidArgument for nil request")

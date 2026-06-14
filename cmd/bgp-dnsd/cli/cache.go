@@ -80,7 +80,7 @@ func (CacheCliServiceImpl) ListCacheEntries(unused *emptypb.Empty, stream grpc.S
 	if stream == nil {
 		return status.Error(codes.InvalidArgument, "stream cannot be nil")
 	}
-	return dns.DumpCache(func(qtype uint16, fqdn string, fails uint64, ips []string, ttl time.Duration, expiration time.Time, gen uint64) error {
+	err := dns.DumpCache(func(qtype uint16, fqdn string, fails uint64, ips []string, ttl time.Duration, expiration time.Time, gen uint64) error {
 		resp := api.ListCacheEntriesResponse{
 			Type:       dns.QTypeToString[qtype],
 			Fqdn:       fqdn,
@@ -92,6 +92,13 @@ func (CacheCliServiceImpl) ListCacheEntries(unused *emptypb.Empty, stream grpc.S
 		}
 		return stream.Send(&resp)
 	})
+	if err != nil {
+		if errors.Is(err, dns.ENotInitialized) {
+			return status.Errorf(codes.FailedPrecondition, "failed to list cache: %v", err)
+		}
+		return status.Errorf(codes.Internal, "failed to list cache: %v", err)
+	}
+	return nil
 }
 
 func (CacheCliServiceImpl) ClearCache(ctx context.Context, req *api.ClearCacheRequest) (*api.ClearCacheResponse, error) {
