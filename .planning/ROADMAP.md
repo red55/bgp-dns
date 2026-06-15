@@ -56,6 +56,14 @@ Plans:
 
 **Notes:** Tests must work with existing global state — Phase 3 refactoring will improve testability.
 
+**Plans:** 3/3 plans executed
+
+Plans:
+
+- [x] 02-01-PLAN.md — BGP reference counting tests (6 scenarios) + DNS resolver failover tests (4 scenarios)
+- [x] 02-02-PLAN.md — Cache eviction tests (5 scenarios) + gRPC CLI lifecycle tests (6 scenarios)
+- [x] 02-03-PLAN.md — E2E integration tests (3 scenarios: DNS→cache→BGP, multi-domain IP sharing, cache hit)
+
 ---
 
 ## Phase 3: Dependency Injection
