@@ -2,11 +2,15 @@ package bgp
 
 import (
 	"context"
+	"io"
+	"testing"
+
 	bgpapi "github.com/osrg/gobgp/v3/api"
 	bgpsrv "github.com/osrg/gobgp/v3/pkg/server"
 	"github.com/red55/bgp-dns/internal/config"
 	"github.com/red55/bgp-dns/internal/log"
 	"github.com/red55/bgp-dns/internal/loop"
+	"github.com/rs/zerolog"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -155,6 +159,41 @@ func Advance(ips []string) error {
 		}
 		return
 	}, true)
+}
+
+// SetBgpForTest replaces the global _bgp with the provided instance.
+// This is a test helper to allow dns package tests to control BGP state.
+func SetBgpForTest(s *bgpSrv) {
+	_bgp = s
+}
+
+// NewBgpSrvForTest creates a bgpSrv suitable for E2E testing from other packages.
+// Returns (srv, cancel) — caller should call cancel in t.Cleanup.
+func NewBgpSrvForTest(t testing.TB) (*bgpSrv, context.CancelFunc) {
+	t.Helper()
+	l := zerolog.New(io.Discard).Level(zerolog.WarnLevel)
+	srv := &bgpSrv{
+		Loop:         loop.NewLoop(1),
+		Log:          log.NewLog(&l, "bgp"),
+		ipRefCounter: make(map[string]*atomic.Uint64),
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	go srv.loop(ctx)
+	t.Cleanup(cancel)
+	return srv, cancel
+}
+
+// GetBgpRefCounter returns a copy of the current ipRefCounter map.
+// This is a test helper to verify reference counts from outside the bgp package.
+func GetBgpRefCounter() map[string]uint64 {
+	if _bgp == nil {
+		return nil
+	}
+	result := make(map[string]uint64)
+	for ip, counter := range _bgp.ipRefCounter {
+		result[ip] = counter.Load()
+	}
+	return result
 }
 
 func Withdraw(ips []string) error {
