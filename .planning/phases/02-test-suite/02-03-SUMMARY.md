@@ -117,6 +117,27 @@ completed: 2026-06-15
 
 None - no external service configuration required.
 
+## Self-Check: PASSED
+
+- [x] `internal/dns/dns_e2e_test.go` exists with 3 test functions
+- [x] `internal/config/test.go` exists with `TestConfig()` helper
+- [x] `internal/bgp/main.go` modified with `NewBgpSrvForTest`, `SetBgpForTest`, `GetBgpRefCounter`
+- [x] `internal/dns/cache.go` modified with `onEntryEvicted` fix
+- [x] `go test ./internal/dns/ -run "TestE2E"` passes
+- [x] `go test ./...` all tests pass
+- [x] No `t.Parallel()` in E2E tests
+- [x] No stubs or placeholder code
+- [x] Commit `a3913fa` contains all test code
+- [x] Commit `a77bf61` contains summary and metadata
+
+## Known Stubs
+
+None.
+
+## Threat Flags
+
+None — test code only, no production surface changes.
+
 ## Next Phase Readiness
 - Phase 02 (Test Suite) has 3 plans: 01 (cache tests), 02 (resolver tests), 03 (E2E tests) — all complete
 - Ready for Phase 03 (Dependency Injection) which addresses the global state concerns
