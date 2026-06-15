@@ -19,7 +19,7 @@
 - [x] **TEST-02**: DNS resolver ring failover has unit tests (round-robin, health tracking)
 - [ ] **TEST-03**: Cache eviction on generation change has unit tests
 - [ ] **TEST-04**: gRPC server lifecycle (Serve/Shutdown) has integration tests
-- [ ] **TEST-05**: End-to-end DNS query → cache → BGP announcement flow has integration test
+- [x] **TEST-05**: End-to-end DNS query → cache → BGP announcement flow has integration test
 
 ### Code Quality Refactor
 
@@ -86,7 +86,7 @@
 | TEST-02 | Phase 2 | Complete |
 | TEST-03 | Phase 2 | Pending |
 | TEST-04 | Phase 2 | Pending |
-| TEST-05 | Phase 2 | Pending |
+| TEST-05 | Phase 2 | Complete |
 | REFACTOR-01 | Phase 3 | Pending |
 | REFACTOR-02 | Phase 3 | Pending |
 | REFACTOR-03 | Phase 3 | Pending |
