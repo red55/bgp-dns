@@ -138,9 +138,13 @@ func Serve(ctx context.Context) (e error) {
 	_bgp = s
 	return nil
 }
+// Shutdown shuts down the BGP service.
 func Shutdown(ctx context.Context) (e error) {
+	if _bgp == nil {
+		return nil
+	}
 	if e = _bgp.bgp.StopBgp(ctx, &bgpapi.StopBgpRequest{}); e != nil {
-		_bgp.L().Panic().Err(e).Msg("Failed to shutdown BGP instance")
+		return fmt.Errorf("bgp: shutdown failed: %w", e)
 	}
 	_bgp.cancel()
 	_bgp.bgp.Stop()
@@ -149,6 +153,9 @@ func Shutdown(ctx context.Context) (e error) {
 }
 
 func Advance(ips []string) error {
+	if _bgp == nil {
+		return fmt.Errorf("bgp: not initialized")
+	}
 	return _bgp.Operation(func() (e error) {
 		for _, ip := range ips {
 			counter := new(atomic.Uint64)
@@ -209,6 +216,9 @@ func GetBgpRefCounter() map[string]uint64 {
 }
 
 func Withdraw(ips []string) error {
+	if _bgp == nil {
+		return fmt.Errorf("bgp: not initialized")
+	}
 	return _bgp.Operation(func() (e error) {
 		for _, ip := range ips {
 			if refs, exists := _bgp.ipRefCounter[ip]; exists {
