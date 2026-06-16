@@ -14,8 +14,9 @@ import (
 type fsWatcher struct {
 	loop.Loop
 	log.Log
-	w *fsnotify.Watcher
-	wg sync.WaitGroup
+	w   *fsnotify.Watcher
+	wg  sync.WaitGroup
+	cfg *config.AppCfg
 	cancel context.CancelFunc
 }
 
@@ -33,6 +34,7 @@ func Serve(ctx context.Context) (e error) {
 		Log:    log.NewLog(log.L(), "fswatcher"),
 		w:      nil,
 		wg:     sync.WaitGroup{},
+		cfg:    cfg,
 		cancel: nil,
 	}
 	if _watcher.w, e = fsnotify.NewWatcher(); e != nil {

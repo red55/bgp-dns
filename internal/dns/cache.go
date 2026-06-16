@@ -14,6 +14,7 @@ import (
 	"github.com/bluele/gcache"
 	"github.com/miekg/dns"
 	"github.com/red55/bgp-dns/internal/bgp"
+	"github.com/red55/bgp-dns/internal/config"
 	"github.com/red55/bgp-dns/internal/log"
 	"github.com/red55/bgp-dns/internal/loop"
 	"github.com/red55/bgp-dns/internal/utils"
@@ -31,16 +32,18 @@ type cache struct {
 	minTtl  time.Duration
 	gen     atomic.Uint64
 	mux     *regexServeMux
+	cfg     *config.AppCfg
 }
 
-func newCache(max int, minTtl time.Duration, rs *resolvers, l *zerolog.Logger) (r *cache) {
+func newCache(max int, minTtl time.Duration, rs *resolvers, l *zerolog.Logger, cfg *config.AppCfg, l2 loop.Loop) (r *cache) {
 	r = &cache{
-		Loop:   loop.NewLoop(1, l),
+		Loop:   l2,
 		Log:    log.NewLog(l, "dns"),
 		cancel: nil,
 		rs:     rs,
 		minTtl: minTtl,
 		gen:    atomic.Uint64{},
+		cfg:    cfg,
 	}
 	r.entries = gcache.New(max).LFU().EvictedFunc(r.onEntryEvicted).Build()
 	r.mux = newRegexServeMux()

@@ -3,12 +3,10 @@ package fswatcher
 import (
 	"context"
 	"github.com/fsnotify/fsnotify"
-	"github.com/red55/bgp-dns/internal/config"
 	"github.com/red55/bgp-dns/internal/dns"
 )
 
 func (w *fsWatcher) loop(ctx context.Context) {
-	var cfg = ctx.Value("cfg").(*config.AppCfg)
 	w.wg.Add(1)
 	defer w.wg.Done()
 
@@ -24,7 +22,7 @@ func (w *fsWatcher) loop(ctx context.Context) {
 			}
 			w.L().Trace().Msgf("Event: %s for %s", ev.Op.String(), ev.Name )
 			if ev.Has(fsnotify.Create) || ev.Has(fsnotify.Write) {
-				if e := dns.Load(cfg.Dns.List.File); e !=nil {
+				if e := dns.Load(w.cfg.Dns.List.File); e !=nil {
 					w.L().Error().Err(e)
 				}
 			}

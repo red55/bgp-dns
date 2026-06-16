@@ -10,6 +10,7 @@ import (
 	"github.com/miekg/dns"
 	"github.com/red55/bgp-dns/internal/config"
 	"github.com/red55/bgp-dns/internal/log"
+	"github.com/red55/bgp-dns/internal/loop"
 )
 
 var (
@@ -34,7 +35,8 @@ func Serve(ctx context.Context) (e error) {
 	ctx, _cancel = context.WithCancel(ctx)
 
 	_resolvers = newResolvers(cfg.Dns.Resolvers, log.L())
-	_cache = newCache(cfg.Dns.Cache.MaxEntries, cfg.Dns.Cache.MinTtl, newResolvers(cfg.Dns.List.Resolvers, log.L()), log.L())
+	l := log.L()
+	_cache = newCache(cfg.Dns.Cache.MaxEntries, cfg.Dns.Cache.MinTtl, newResolvers(cfg.Dns.List.Resolvers, l), l, cfg, loop.NewLoop(1, l))
 	mux := newRegexServeMux()
 	_cache.SetMux(mux)
 	mux.SetCatchAll(_resolvers.proxyQuery)

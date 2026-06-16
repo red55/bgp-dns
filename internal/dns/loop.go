@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"github.com/miekg/dns"
-	"github.com/red55/bgp-dns/internal/config"
-	"github.com/red55/bgp-dns/internal/log"
 	"math"
 	"time"
 )
@@ -13,8 +11,6 @@ import (
 func (c *cache) loop(ctx context.Context) {
 	c.wg.Add(1)
 	defer c.wg.Done()
-
-	cfg := ctx.Value("cfg").(*config.AppCfg)
 L:
 	for {
 		var sleepUntil time.Time
@@ -26,7 +22,7 @@ L:
 			ce := all[c.entries.Keys(true)[0]].(*cacheEntry)
 			sleepUntil = time.Unix(0, ce.expiration.Load())
 		} else {
-			sleepUntil = time.Now().Add(cfg.Dns.Cache.MinTtl * time.Second)
+			sleepUntil = time.Now().Add(c.cfg.Dns.Cache.MinTtl * time.Second)
 		}
 
 		for k, v := range all {
@@ -55,8 +51,8 @@ L:
 		}
 		c.L().Trace().Msgf("Calculated sleep until and now difference is %d sec",
 			time.Duration(math.Abs(float64(sleepUntil.Sub(now))))/time.Second)
-		if time.Duration(math.Abs(float64(sleepUntil.Sub(now)))) < cfg.Dns.Cache.MinTtl*time.Second {
-			sleepUntil = now.Add(cfg.Dns.Cache.MinTtl * time.Second)
+		if time.Duration(math.Abs(float64(sleepUntil.Sub(now)))) < c.cfg.Dns.Cache.MinTtl*time.Second {
+			sleepUntil = now.Add(c.cfg.Dns.Cache.MinTtl * time.Second)
 		}
 
 		c.L().Info().Msgf("DNS Refresher will sleep until %s for %d seconds", sleepUntil.Format(time.RFC3339),
@@ -74,7 +70,7 @@ L:
 		case <-ctx.Done():
 			cancelTimeout()
 			if !errors.Is(ctx.Err(), context.Canceled) {
-				log.L().Error().Err(ctx.Err())
+				c.L().Error().Err(ctx.Err())
 			}
 			break L
 		}
