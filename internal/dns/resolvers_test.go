@@ -2,10 +2,12 @@ package dns
 
 import (
 	"net"
+	"os"
 	"sync/atomic"
 	"testing"
 
 	"github.com/miekg/dns"
+	"github.com/rs/zerolog"
 )
 
 // ---------------------------------------------------------------------------
@@ -28,7 +30,8 @@ func newTestResolvers(t *testing.T, addrs []string) *resolvers {
 		}
 		udpAddrs[i] = addr
 	}
-	return newResolvers(udpAddrs)
+	l := zerolog.New(os.Stdout).Level(zerolog.WarnLevel)
+	return newResolvers(udpAddrs, &l)
 }
 
 // fakeDNSServer creates a DNS server that calls the given handler.

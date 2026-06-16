@@ -14,9 +14,9 @@ import (
 	"github.com/spf13/viper"
 )
 
-// configKey is the unexported context key type for config values.
+// ConfigKey is the typed context key for config values.
 // Being a struct type prevents external packages from creating colliding keys.
-type configKey struct{}
+type ConfigKey struct{}
 
 func Init(path string) (*AppCfg, error) {
 	viper.SetConfigFile(path)

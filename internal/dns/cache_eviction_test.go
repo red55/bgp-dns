@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
+	"github.com/red55/bgp-dns/internal/config"
+	"github.com/red55/bgp-dns/internal/loop"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -90,7 +92,7 @@ func TestCache_TTLExpiration(t *testing.T) {
 // capacity via LFU eviction when new entries are added.
 func TestCache_CapacityLimit(t *testing.T) {
 	l := zerolog.New(os.Stderr).Level(zerolog.WarnLevel)
-	c := newCache(3, time.Duration(60), newResolversWithLogger(&l), &l)
+	c := newCache(3, time.Duration(60), newResolversWithLogger(&l), &l, config.TestConfig(), loop.NewLoop(1, &l))
 
 	tmpDir := t.TempDir()
 	listFile := filepath.Join(tmpDir, "test.lst")

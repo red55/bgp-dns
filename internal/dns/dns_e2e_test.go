@@ -10,6 +10,7 @@ import (
 	"github.com/miekg/dns"
 	"github.com/red55/bgp-dns/internal/bgp"
 	"github.com/red55/bgp-dns/internal/config"
+	"github.com/red55/bgp-dns/internal/loop"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,7 +22,7 @@ import (
 
 // testContext returns a context with a minimal test config embedded.
 func testContext() context.Context {
-	return context.WithValue(context.Background(), "cfg", config.TestConfig())
+	return context.WithValue(context.Background(), config.ConfigKey{}, config.TestConfig())
 }
 
 // fakeDNSServerForE2E creates a UDP DNS server that responds with an A record
@@ -84,8 +85,8 @@ func setupE2EEnv(t *testing.T, domain, ip string) *cache {
 
 	// 3. Create cache with resolver pointing to fake DNS server
 	l := zerolog.New(os.Stderr).Level(zerolog.WarnLevel)
-	resolvers := newResolvers([]*net.UDPAddr{mustResolveUDP(t, fakeAddr)})
-	c := newCache(100, time.Duration(60), resolvers, &l)
+	resolvers := newResolvers([]*net.UDPAddr{mustResolveUDP(t, fakeAddr)}, &l)
+	c := newCache(100, time.Duration(60), resolvers, &l, config.TestConfig(), loop.NewLoop(1, &l))
 
 	// 4. Register domain in cache mux (triggers auto-lookup for A + HTTPS)
 	require.NoError(t, c.register(domain))
@@ -144,8 +145,8 @@ func TestE2E_MultiDomainIPSharing(t *testing.T) {
 
 	// 3. Create cache with resolver pointing to fake DNS server
 	l := zerolog.New(os.Stderr).Level(zerolog.WarnLevel)
-	resolvers := newResolvers([]*net.UDPAddr{mustResolveUDP(t, fakeAddr)})
-	c := newCache(100, time.Duration(60), resolvers, &l)
+	resolvers := newResolvers([]*net.UDPAddr{mustResolveUDP(t, fakeAddr)}, &l)
+	c := newCache(100, time.Duration(60), resolvers, &l, config.TestConfig(), loop.NewLoop(1, &l))
 
 	// 4. Register both domains (each triggers auto-lookup for A + HTTPS)
 	require.NoError(t, c.register("example.com."))

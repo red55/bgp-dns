@@ -2,6 +2,7 @@ package bgp
 
 import (
 	"context"
+	"io"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -39,9 +40,10 @@ func initTestLogger() {
 func newTestBgpSrv(t *testing.T) (*bgpSrv, *testHooks) {
 	t.Helper()
 	initTestLogger()
+	l := zerolog.New(io.Discard).Level(zerolog.WarnLevel)
 
 	srv := &bgpSrv{
-		Loop:         loop.NewLoop(1),
+		Loop:         loop.NewLoop(1, &l),
 		ipRefCounter: make(map[string]*atomic.Uint64),
 		asn:          65000,
 	}

@@ -6,7 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/red55/bgp-dns/internal/config"
 	"github.com/red55/bgp-dns/internal/log"
+	"github.com/red55/bgp-dns/internal/loop"
 	"github.com/rs/zerolog"
 )
 
@@ -18,7 +20,7 @@ func newTestCache(t *testing.T) *cache {
 	t.Helper()
 	initTestLogger()
 	l := zerolog.New(os.Stderr).Level(zerolog.WarnLevel)
-	return newCache(100, time.Duration(60), newResolversWithLogger(&l), &l)
+	return newCache(100, time.Duration(60), newResolversWithLogger(&l), &l, config.TestConfig(), loop.NewLoop(1, &l))
 }
 
 func newResolversWithLogger(l *zerolog.Logger) *resolvers {
