@@ -3,7 +3,7 @@
 **Verification Date:** 2026-06-16
 **Phase:** 03-dependency-injection
 **Plans Verified:** 6 (03-01 through 03-06)
-**Status:** ISSUES FOUND
+**Status:** PASS (all issues resolved)
 
 ---
 
@@ -11,11 +11,11 @@
 
 The plans correctly implement the per-package constructor pattern (D-01), typed context key (D-05), explicit logger injection (D-06), and backward-compatible wrappers (D-04/D-07). All 4 requirements (REFACTOR-01 through REFACTOR-04) and all 9 decisions (D-01 through D-09) are addressed across the 6 plans.
 
-However, **3 BLOCKER issues** prevent the plans from compiling correctly in their declared sequential execution order:
+All issues have been resolved:
 
-1. **Plan 01 Task 2 modifies `fswatcher/loop.go` to use `w.cfg` before Plan 04 adds the `cfg` field to the `fsWatcher` struct** — this causes a compilation failure after Plan 01 executes.
-2. **Plan 02 Task 3 does not update `newCache` to accept a `loop.Loop` parameter** — the `NewDns` constructor receives a loop but it's never used; `newCache` still creates its own loop internally without a logger.
-3. **RESEARCH.md `## Open Questions` section is not marked `(RESOLVED)`** — per Dimension 11, this is a blocker.
+1. **Plan 01 Task 2** — Added `cfg *config.AppCfg` field to `fsWatcher` struct in Plan 01 (Wave 0), enabling `fswatcher/loop.go` to use `w.cfg` immediately. Plan 04 (Wave 3) no longer adds the field (already present).
+2. **Plan 02 Task 1** — Updated `newCache` signature to accept `loop loop.Loop` parameter. `NewDns` now passes injected loop to `newCache(cfg, ..., l)`.
+3. **RESEARCH.md** — `## Open Questions` section renamed to `## Open Questions (RESOLVED)` with all 6 questions marked as resolved.
 
 ---
 
