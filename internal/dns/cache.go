@@ -35,7 +35,7 @@ type cache struct {
 
 func newCache(max int, minTtl time.Duration, rs *resolvers, l *zerolog.Logger) (r *cache) {
 	r = &cache{
-		Loop:   loop.NewLoop(1),
+		Loop:   loop.NewLoop(1, l),
 		Log:    log.NewLog(l, "dns"),
 		cancel: nil,
 		rs:     rs,

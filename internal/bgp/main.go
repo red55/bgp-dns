@@ -40,7 +40,7 @@ var (
 func Serve(ctx context.Context) (e error) {
 	cfg := ctx.Value("cfg").(*config.AppCfg)
 	_bgp = &bgpSrv{
-		Loop: loop.NewLoop(1),
+		Loop: loop.NewLoop(1, log.L()),
 		Log:  log.NewLog(log.L(), "bgp"),
 		bgp:  bgpsrv.NewBgpServer(bgpsrv.LoggerOption(newZeroLogger(cfg.Log.Level))),
 		//ipRefCounter: hashmap.New[string, *atomic.Uint64](),
@@ -173,7 +173,7 @@ func NewBgpSrvForTest(t testing.TB) (*bgpSrv, context.CancelFunc) {
 	t.Helper()
 	l := zerolog.New(io.Discard).Level(zerolog.WarnLevel)
 	srv := &bgpSrv{
-		Loop:         loop.NewLoop(1),
+		Loop:         loop.NewLoop(1, &l),
 		Log:          log.NewLog(&l, "bgp"),
 		ipRefCounter: make(map[string]*atomic.Uint64),
 	}

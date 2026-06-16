@@ -29,7 +29,7 @@ func Serve(ctx context.Context) (e error) {
 	var cfg = ctx.Value("cfg").(*config.AppCfg)
 
 	_watcher = &fsWatcher{
-		Loop:   loop.NewLoop(1),
+		Loop:   loop.NewLoop(1, log.L()),
 		Log:    log.NewLog(log.L(), "fswatcher"),
 		w:      nil,
 		wg:     sync.WaitGroup{},

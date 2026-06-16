@@ -10,6 +10,8 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
+
+	"github.com/rs/zerolog"
 )
 
 var (
@@ -51,9 +53,9 @@ type resolvers struct {
 	rs *ring.Ring
 }
 
-func newResolvers(c []*net.UDPAddr) *resolvers {
+func newResolvers(c []*net.UDPAddr, logger *zerolog.Logger) *resolvers {
 	r := &resolvers{
-		Log: log.NewLog(log.L(), "resolvers"),
+		Log: log.NewLog(logger, "resolvers"),
 	}
 	r.setResolvers(c)
 

@@ -33,8 +33,8 @@ func Serve(ctx context.Context) (e error) {
 	}
 	ctx, _cancel = context.WithCancel(ctx)
 
-	_resolvers = newResolvers(cfg.Dns.Resolvers)
-	_cache = newCache(cfg.Dns.Cache.MaxEntries, cfg.Dns.Cache.MinTtl, newResolvers(cfg.Dns.List.Resolvers), log.L())
+	_resolvers = newResolvers(cfg.Dns.Resolvers, log.L())
+	_cache = newCache(cfg.Dns.Cache.MaxEntries, cfg.Dns.Cache.MinTtl, newResolvers(cfg.Dns.List.Resolvers, log.L()), log.L())
 	mux := newRegexServeMux()
 	_cache.SetMux(mux)
 	mux.SetCatchAll(_resolvers.proxyQuery)

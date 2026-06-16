@@ -2,6 +2,7 @@ package loop
 
 import (
 	"github.com/red55/bgp-dns/internal/log"
+	"github.com/rs/zerolog"
 )
 
 type loopOp struct {
@@ -14,8 +15,8 @@ type Loop struct {
 	l    *log.Log
 }
 
-func NewLoop(bufSize int) Loop {
-	l := log.NewLog(log.L(), "loop")
+func NewLoop(bufSize int, logger *zerolog.Logger) Loop {
+	l := log.NewLog(logger, "loop")
 	return Loop{
 		opCh: make(chan *loopOp, bufSize), //, bufSize
 		l:    &l,
