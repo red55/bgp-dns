@@ -11,98 +11,109 @@ import (
 	"github.com/red55/bgp-dns/internal/config"
 	"github.com/red55/bgp-dns/internal/log"
 	"github.com/red55/bgp-dns/internal/loop"
+	"github.com/rs/zerolog"
 )
 
-var (
-	_server    *dns.Server
-	_wg        sync.WaitGroup
-	_resolvers *resolvers
-	_cancel    context.CancelFunc
-	_cache     *cache
+// Service holds all DNS subsystem state.
+type Service struct {
+	loop      loop.Loop
+	log.Log
+	cfg       *config.AppCfg
+	cache     *cache
+	resolvers *resolvers
+	cancel    context.CancelFunc
+	server    *dns.Server
+	wg        sync.WaitGroup
+}
 
+// Package-level global for backward compatibility (set by Serve).
+var _dns *Service
+
+var (
 	EInvalidFQDN    = errors.New("invalid FQDN")
 	ENotInitialized = errors.New("cache subsystem is not initialized")
 
 	QTypeToString = dns.TypeToString
 )
 
-func Serve(ctx context.Context) (e error) {
-	var cfg = ctx.Value("cfg").(*config.AppCfg)
-
-	if nil != _cancel {
-		_cancel()
+// NewDns creates a DNS service with explicit dependencies.
+// Returns (Service, error) — no panics.
+func NewDns(cfg *config.AppCfg, l loop.Loop, logger *zerolog.Logger) (*Service, error) {
+	s := &Service{
+		cfg:  cfg,
+		loop: l,
+		Log:  log.NewLog(logger, "dns"),
 	}
-	ctx, _cancel = context.WithCancel(ctx)
 
-	_resolvers = newResolvers(cfg.Dns.Resolvers, log.L())
-	l := log.L()
-	_cache = newCache(cfg.Dns.Cache.MaxEntries, cfg.Dns.Cache.MinTtl, newResolvers(cfg.Dns.List.Resolvers, l), l, cfg, loop.NewLoop(1, l))
+	s.resolvers = newResolvers(cfg.Dns.Resolvers, logger)
+	s.cache = newCache(cfg.Dns.Cache.MaxEntries, cfg.Dns.Cache.MinTtl, s.resolvers, logger, cfg, l)
 	mux := newRegexServeMux()
-	_cache.SetMux(mux)
-	mux.SetCatchAll(_resolvers.proxyQuery)
-	e = _cache.serve(ctx)
+	s.cache.SetMux(mux)
+	mux.SetCatchAll(s.resolvers.proxyQuery)
 
-	go func(c context.Context) {
-		_server = &dns.Server{
-			Addr:      fmt.Sprintf("%s:%d", cfg.Dns.Listen.IP.String(), cfg.Dns.Listen.Port),
-			Net:       "udp",
-			ReusePort: true,
-			Handler:   mux,
-		}
-		_wg.Add(1)
-		defer _wg.Done()
+	if err := s.cache.serve(context.Background()); err != nil {
+		return nil, fmt.Errorf("dns: cache serve failed: %w", err)
+	}
 
-		if err := _server.ListenAndServe(); err != nil {
-			log.L().Fatal().Str("m", "dns").Err(err).Msg("Failed to bind DNS resolver")
-		}
-	}(ctx)
-
-	return e
+	return s, nil
 }
 
-func Shutdown(ctx context.Context) error {
-	_cache.mux.clear()
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer func() {
-		cancel()
-	}()
-
-	if nil != _cancel {
-		_cancel()
-		_cancel = nil
+// Serve creates the DNS service and stores it in the package-level _dns global.
+// This wrapper exists for backward compatibility with Phase 2 tests.
+func Serve(ctx context.Context) error {
+	cfg := ctx.Value(config.ConfigKey{}).(*config.AppCfg)
+	l := loop.NewLoop(1, log.L())
+	s, err := NewDns(cfg, l, log.L())
+	if err != nil {
+		return err
 	}
-	_ = _cache.shutdown()
-
-	if e := _server.ShutdownContext(ctx); e != nil && !errors.Is(e, context.Canceled) {
-		return e
-	}
-
-	_ = _cache.evictByGeneration(_cache.generation())
-
-	_wg.Wait()
-
+	_dns = s
 	return nil
 }
 
+// Shutdown shuts down the DNS service.
+func Shutdown(ctx context.Context) error {
+	if _dns == nil {
+		return nil
+	}
+	_dns.cache.mux.clear()
+	shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	if _dns.cancel != nil {
+		_dns.cancel()
+		_dns.cancel = nil
+	}
+	_ = _dns.cache.shutdown()
+
+	if e := _dns.server.ShutdownContext(shutdownCtx); e != nil && !errors.Is(e, context.Canceled) {
+		return e
+	}
+	_ = _dns.cache.evictByGeneration(_dns.cache.generation())
+	_dns.wg.Wait()
+	return nil
+}
+
+// Load delegates to the package-level service.
 func Load(fn string) error {
-	if _cache == nil {
+	if _dns == nil || _dns.cache == nil {
 		return ENotInitialized
 	}
-	return _cache.load(fn)
+	return _dns.cache.load(fn)
 }
 
+// DumpCache delegates to the package-level service.
 func DumpCache(callback func(qtype uint16, fqdn string, fails uint64, ips []string, ttl time.Duration, expiration time.Time, gen uint64) error) error {
-	if _cache == nil {
+	if _dns == nil || _dns.cache == nil {
 		return ENotInitialized
 	}
-
-	return _cache.dump(callback)
+	return _dns.cache.dump(callback)
 }
 
+// ClearCache delegates to the package-level service.
 func ClearCache() (uint64, error) {
-	if _cache == nil {
+	if _dns == nil || _dns.cache == nil {
 		return 0, ENotInitialized
 	}
-
-	return _cache.clear(), nil
+	return _dns.cache.clear(), nil
 }
