@@ -126,28 +126,7 @@ func (rs *resolvers) query(q *dns.Msg) (*dns.Msg, error) {
 					return a, e
 				}
 
-				/*
-					cause := e
-					if unwrap, ok := cause.(interface{ Unwrap() error }); ok {
-						cause = unwrap.Unwrap()
-					}
 
-					var opError *net.OpError
-
-					switch {
-					case errors.As(cause, &opError):
-						rs.L().Error().Msgf("DNS op %s failed with %s on destination %s", opError.Op, opError.Error(),
-							opError.Addr)
-						//return nil, cause
-					default:
-						var rCode = -1
-						if a != nil {
-							rCode = a.Rcode
-						}
-						rs.L().Error().Err(errors.Join(fmt.Errorf("failed to dail %s, Rcode: %x", srv.addr, rCode), e))
-						//return nil, errors.Join(fmt.Errorf("failed to dail %s, Rcode: %x", srv.addr, rCode), e)
-					}
-				*/
 			}
 		}
 	}

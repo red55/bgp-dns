@@ -21,7 +21,6 @@ type bgpSrv struct {
 	loop.Loop
 	log.Log
 	bgp *bgpsrv.BgpServer
-	//ipRefCounter  *hashmap.Map[string, *atomic.Uint64]
 	ipRefCounter map[string]*atomic.Uint64
 	cancel       context.CancelFunc
 	wg           sync.WaitGroup
