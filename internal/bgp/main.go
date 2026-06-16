@@ -118,7 +118,7 @@ func NewBgp(cfg *config.AppCfg, l loop.Loop, logger *zerolog.Logger) (*bgpSrv, e
 				},
 			},
 		}); e != nil {
-			return nil, fmt.Errorf("bgp: add peer %s failed: %w", peer.Address, e)
+			return nil, fmt.Errorf("bgp: add peer %s failed: %w", peer.Address.String(), e)
 		}
 	}
 
