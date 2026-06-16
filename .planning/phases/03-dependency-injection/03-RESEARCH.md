@@ -567,22 +567,25 @@ func main() {
 | A4 | E2E tests call `newCache()` and `newResolvers()` directly, so internal constructor signatures must stay compatible | Common Pitfall #1 | If internal signatures change, 3 E2E tests break |
 | A5 | `bgp.SetBgpForTest()` and `bgp.NewBgpSrvForTest()` must continue to work — they set the global `_bgp` | Architecture | If test helpers break, E2E tests fail |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should `loop.Loop` be embedded in service structs (like current `bgpSrv` embeds `loop.Loop`)?**
-   - What we know: Current `bgpSrv` embeds `loop.Loop` and `log.Log`. This gives `bgpSrv` access to `Operation()`, `ChanOp()`, `HandleOp()` methods directly.
-   - What's unclear: Whether to keep embedding or switch to composition (store as field).
-   - Recommendation: Keep embedding — it's the current pattern and works well. The planner should preserve `Loop` embedding in service structs.
+   - RESOLVED: Keep embedding — confirmed in CONTEXT.md D-01. Service structs embed `loop.Loop` and `log.Log` (bgpSrv pattern).
 
 2. **Should `cache` struct also receive config via constructor instead of reading from context in loop?**
-   - What we know: `cache.loop()` in `loop.go` reads `ctx.Value("cfg")` and `log.L()`.
-   - What's unclear: Whether to pass config to `cache.serve()` or store it in the cache struct.
-   - Recommendation: Store config in the `cache` struct (set via `newCache()` constructor). The loop method accesses `c.cfg` directly. This is the simplest migration path.
+   - RESOLVED: Store config in `cache` struct via `newCache()` constructor — confirmed in CONTEXT.md D-07. Loop method accesses `c.cfg` directly.
 
 3. **What happens to the `log.L()` global function after DI?**
-   - What we know: `log.L()` is called in `main.go`, `loop.NewLoop()`, `resolvers.newResolvers()`, and the wrapper functions.
-   - What's unclear: Whether `log.L()` should remain for production defaults or be removed entirely.
-   - Recommendation: Keep `log.L()` for production default path (used in wrapper functions). Test code uses explicit logger injection. This maintains backward compatibility.
+   - RESOLVED: Keep `log.L()` for production default path — confirmed in CONTEXT.md D-08. Test code uses explicit logger injection.
+
+4. **How should `newCache` handle loop creation?**
+   - RESOLVED: `newCache` accepts `loop.Loop` parameter from constructor — Plan 02 passes injected loop to newCache, avoiding internal loop.NewLoop() call.
+
+5. **When should `fsWatcher.cfg` field be added?**
+   - RESOLVED: Added in Wave 0 (Plan 01) — enables fswatcher/loop.go to use w.cfg before Wave 3 (Plan 04) creates NewFsWatcher constructor.
+
+6. **How should wrapper functions handle config extraction?**
+   - RESOLVED: Use typed `configKey{}` — confirmed in CONTEXT.md D-05. Serve wrappers extract config via `ctx.Value(configKey{}).(*config.AppCfg)`.
 
 ## Environment Availability
 
