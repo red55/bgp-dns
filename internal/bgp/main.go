@@ -143,12 +143,20 @@ func Shutdown(ctx context.Context) (e error) {
 	if _bgp == nil {
 		return nil
 	}
-	if e = _bgp.bgp.StopBgp(ctx, &bgpapi.StopBgpRequest{}); e != nil {
+	return _bgp.Shutdown(ctx)
+}
+
+// Shutdown shuts down this BGP service instance.
+func (s *bgpSrv) Shutdown(ctx context.Context) error {
+	if s == nil {
+		return nil
+	}
+	if e := s.bgp.StopBgp(ctx, &bgpapi.StopBgpRequest{}); e != nil {
 		return fmt.Errorf("bgp: shutdown failed: %w", e)
 	}
-	_bgp.cancel()
-	_bgp.bgp.Stop()
-	_bgp.wg.Wait()
+	s.cancel()
+	s.bgp.Stop()
+	s.wg.Wait()
 	return nil
 }
 

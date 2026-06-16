@@ -73,16 +73,24 @@ func NewFsWatcher(cfg *config.AppCfg, l loop.Loop, logger *zerolog.Logger) (*fsW
 }
 
 func Shutdown(ctx context.Context) (e error) {
-	if _watcher.w == nil {
+	if _watcher == nil || _watcher.w == nil {
 		return
 	}
+	return _watcher.Shutdown(ctx)
+}
 
-	if _watcher.cancel != nil {
-		_watcher.cancel()
-		_watcher.cancel = nil
+// Shutdown shuts down this fsWatcher instance.
+func (s *fsWatcher) Shutdown(ctx context.Context) error {
+	if s == nil || s.w == nil {
+		return nil
 	}
-	e = _watcher.w.Close()
-	_watcher.wg.Wait()
-	_watcher.w = nil
-	return
+
+	if s.cancel != nil {
+		s.cancel()
+		s.cancel = nil
+	}
+	e := s.w.Close()
+	s.wg.Wait()
+	s.w = nil
+	return e
 }

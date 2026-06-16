@@ -76,21 +76,29 @@ func Shutdown(ctx context.Context) error {
 	if _dns == nil {
 		return nil
 	}
-	_dns.cache.mux.clear()
+	return _dns.Shutdown(ctx)
+}
+
+// Shutdown shuts down this DNS service instance.
+func (s *Service) Shutdown(ctx context.Context) error {
+	if s == nil {
+		return nil
+	}
+	s.cache.mux.clear()
 	shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	if _dns.cancel != nil {
-		_dns.cancel()
-		_dns.cancel = nil
+	if s.cancel != nil {
+		s.cancel()
+		s.cancel = nil
 	}
-	_ = _dns.cache.shutdown()
+	_ = s.cache.shutdown()
 
-	if e := _dns.server.ShutdownContext(shutdownCtx); e != nil && !errors.Is(e, context.Canceled) {
+	if e := s.server.ShutdownContext(shutdownCtx); e != nil && !errors.Is(e, context.Canceled) {
 		return e
 	}
-	_ = _dns.cache.evictByGeneration(_dns.cache.generation())
-	_dns.wg.Wait()
+	_ = s.cache.evictByGeneration(s.cache.generation())
+	s.wg.Wait()
 	return nil
 }
 
