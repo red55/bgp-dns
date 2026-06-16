@@ -7,6 +7,7 @@ import (
 	"github.com/red55/bgp-dns/internal/config"
 	"github.com/red55/bgp-dns/internal/log"
 	"github.com/red55/bgp-dns/internal/loop"
+	"github.com/rs/zerolog"
 	"os"
 	"sync"
 )
@@ -26,35 +27,49 @@ var (
 )
 
 
+// Serve creates the FSWatcher service and stores it in the package-level _watcher global.
+// This wrapper exists for backward compatibility with Phase 2 tests.
 func Serve(ctx context.Context) (e error) {
-	var cfg = ctx.Value("cfg").(*config.AppCfg)
+	cfg := ctx.Value(config.ConfigKey{}).(*config.AppCfg)
+	l := loop.NewLoop(1, log.L())
+	s, err := NewFsWatcher(cfg, l, log.L())
+	if err != nil {
+		return err
+	}
+	_watcher = s
+	return nil
+}
 
-	_watcher = &fsWatcher{
-		Loop:   loop.NewLoop(1, log.L()),
-		Log:    log.NewLog(log.L(), "fswatcher"),
-		w:      nil,
-		wg:     sync.WaitGroup{},
+// NewFsWatcher creates a file system watcher service with explicit dependencies.
+// Returns (*fsWatcher, error) — no panics.
+func NewFsWatcher(cfg *config.AppCfg, l loop.Loop, logger *zerolog.Logger) (*fsWatcher, error) {
+	w := &fsWatcher{
+		Loop:   l,
+		Log:    log.NewLog(logger, "fswatcher"),
 		cfg:    cfg,
+		wg:     sync.WaitGroup{},
 		cancel: nil,
 	}
-	if _watcher.w, e = fsnotify.NewWatcher(); e != nil {
-		return
+	var e error
+	if w.w, e = fsnotify.NewWatcher(); e != nil {
+		return nil, fmt.Errorf("fswatcher: create watcher failed: %w", e)
 	}
 
 	var inf os.FileInfo
 	if inf, e = os.Stat(cfg.Dns.List.File); e != nil || inf.IsDir() {
 		e = fmt.Errorf("%s is not a file", cfg.Dns.List.File)
-		return
+		return nil, e
 	}
 
-	if e = _watcher.w.Add(cfg.Dns.List.File); e != nil {
-		return
+	if e = w.w.Add(cfg.Dns.List.File); e != nil {
+		return nil, fmt.Errorf("fswatcher: add watch failed: %w", e)
 	}
 
-	ctx, _watcher.cancel = context.WithCancel(ctx)
-	go _watcher.loop(ctx)
+	var loopCtx context.Context
+	loopCtx, w.cancel = context.WithCancel(context.Background())
+	go w.loop(loopCtx)
 
-	return
+	return w, nil
 }
 
 func Shutdown(ctx context.Context) (e error) {
