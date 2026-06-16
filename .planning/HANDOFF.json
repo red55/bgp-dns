@@ -1,0 +1,24 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-06-16T15:50:06.130Z",
+  "phase": "04",
+  "phase_name": "reliability",
+  "phase_dir": ".planning/phases/04-reliability",
+  "plan": null,
+  "task": null,
+  "total_tasks": 0,
+  "status": "paused_between_phases",
+  "completed_tasks": [],
+  "remaining_tasks": [],
+  "blockers": [],
+  "human_actions_pending": [],
+  "decisions": [
+    {"decision": "DNS timeout: single global Dns.Timeout, default 5s, range 3s–30s", "rationale": "Simplest fix for hanging dns.Exchange(), matches RELIAB-01 requirement", "phase": "04"},
+    {"decision": "DNS timeout: per-resolver cached dns.Client (not per-query)", "rationale": "Better efficiency, one client per resolver address", "phase": "04"},
+    {"decision": "BGP context: store daemon lifecycle context in bgpSrv struct, pass to all GoBGP API calls", "rationale": "Simplest change — bgpSrv already has cancel field; just store ctx too", "phase": "04"},
+    {"decision": "BGP context: NewBgp accepts context.Context as first param from main.go", "rationale": "Threads daemon lifecycle context through to BGP service", "phase": "04"}
+  ],
+  "uncommitted_files": [],
+  "next_action": "Discuss remaining Phase 4 gray areas (BGP error logging, O(n) set difference), then plan Phase 4",
+  "context_notes": "Phase 3 fully complete and committed. Phase 4 gray areas 1 (DNS timeout) and 2 (BGP context) discussed and resolved. Gray areas 3 (BGP error logging) and 4 (O(n) set difference) still need discussion. Phase 4 directory exists but is empty — no context/plan files created yet."
+}
