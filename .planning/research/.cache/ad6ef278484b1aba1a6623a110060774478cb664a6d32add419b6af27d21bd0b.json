@@ -1,0 +1,1 @@
+{"content":"Go startup error handling: constructors return (Service, error) instead of panicking. Callers (main.go) handle errors with graceful shutdown sequences. For fatal errors in production, log at Fatal level but return error for testability.","source":"web","provider":"context7","confidence":"MEDIUM","fetched_at":"2026-06-16T02:40:08.115Z","ttl":86400000,"kind":"docs"}

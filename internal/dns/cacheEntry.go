@@ -28,9 +28,9 @@ func newCacheKey(fqdn string, qtype uint16) (new cacheKey) {
 
 type cacheEntry struct {
 	gen        atomic.Uint64
-	ttl        time.Duration
+	ttl        atomic.Int64 // nanoseconds
 	answer     *dns.Msg
-	expiration time.Time
+	expiration atomic.Int64 // Unix nanoseconds
 	failures   atomic.Uint64
 }
 
@@ -58,8 +58,8 @@ func newCacheEntry(m *dns.Msg, mTtl time.Duration, gen uint64) *cacheEntry {
 
 func (ce *cacheEntry) updateTtl(mTtlSeconds time.Duration) {
 	mTtlSeconds = minTtl(ce.answer, mTtlSeconds)
-	ce.ttl = mTtlSeconds
-	ce.expiration = time.Now().Add(ce.ttl * time.Second)
+	ce.ttl.Store(int64(mTtlSeconds))
+	ce.expiration.Store(time.Now().Add(mTtlSeconds * time.Second).UnixNano())
 }
 
 func (ce *cacheEntry) generation() uint64 {
@@ -118,5 +118,6 @@ func (ce *cacheEntry) String() string {
 	}
 	fqdn = ce.answer.Question[0].Name
 	return fmt.Sprintf("fqdn: %s, gen: %d, ttl: %v, expiration: %v, failures: %d",
-		fqdn, ce.generation(), ce.ttl, ce.expiration.Format(time.RFC3339), ce.Failures())
+		fqdn, ce.generation(), time.Duration(ce.ttl.Load()),
+		time.Unix(0, ce.expiration.Load()).Format(time.RFC3339), ce.Failures())
 }

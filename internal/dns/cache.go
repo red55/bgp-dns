@@ -294,7 +294,8 @@ func (c *cache) dump(callback func(qtype uint16, fqdn string, fails uint64, ips 
 	for k, v := range all {
 		ce := v.(*cacheEntry)
 		key := k.(cacheKey)
-		if e := callback(key.qtype, key.fqdn, ce.Failures(), ce.Ip4s(), ce.ttl, ce.expiration, ce.gen.Load()); e != nil {
+		if e := callback(key.qtype, key.fqdn, ce.Failures(), ce.Ip4s(),
+			time.Duration(ce.ttl.Load()), time.Unix(0, ce.expiration.Load()), ce.gen.Load()); e != nil {
 			return e
 		}
 	}

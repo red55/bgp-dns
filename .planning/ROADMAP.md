@@ -81,6 +81,17 @@ Plans:
 
 **Dependencies:** Must pass Phase 2 tests before and after refactoring to verify behavioral equivalence.
 
+**Plans:** 0/6 plans
+
+Plans:
+
+- [ ] 03-01-PLAN.md — Foundation: typed configKey, Loop/logger injection, resolver logger injection, cache config field, test helper updates
+- [ ] 03-02-PLAN.md — DNS service struct, NewDns constructor, backward-compatible wrappers (Serve, Shutdown, Load, DumpCache, ClearCache)
+- [ ] 03-03-PLAN.md — BGP service NewBgp constructor, updated Serve/Shutdown/Advance/Withdraw wrappers, test helper updates
+- [ ] 03-04-PLAN.md — FSWatcher service struct with cfg field, NewFsWatcher constructor, updated Serve/Shutdown wrappers
+- [ ] 03-05-PLAN.md — main.go: typed configKey, constructor-based service creation, error handling, deferred cleanup
+- [ ] 03-06-PLAN.md — Dead code removal: commented hashmap in bgp/main.go, commented error handling in resolvers.go
+
 ---
 
 ## Phase 4: Reliability

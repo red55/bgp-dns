@@ -1,0 +1,14 @@
+{
+  "features": {
+    "ghcr.io/ChristopherMacGown/devcontainer-features/mcfly:1": {
+      "version": "1.0.2",
+      "resolved": "ghcr.io/christophermacgown/devcontainer-features/mcfly@sha256:780a2b9a4883c991dfa079a93947487d7a067789a14727515f5d276765889711",
+      "integrity": "sha256:780a2b9a4883c991dfa079a93947487d7a067789a14727515f5d276765889711"
+    },
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "version": "2.5.9",
+      "resolved": "ghcr.io/devcontainers/features/common-utils@sha256:cb0c4d3c276f157eed17935747e364178d75fee17f55c4e129966f64633deb3a",
+      "integrity": "sha256:cb0c4d3c276f157eed17935747e364178d75fee17f55c4e129966f64633deb3a"
+    }
+  }
+}

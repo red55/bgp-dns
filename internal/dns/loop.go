@@ -23,7 +23,8 @@ L:
 		all := c.entries.GetALL(true)
 
 		if len(all) > 0 {
-			sleepUntil = all[c.entries.Keys(true)[0]].(*cacheEntry).expiration
+			ce := all[c.entries.Keys(true)[0]].(*cacheEntry)
+			sleepUntil = time.Unix(0, ce.expiration.Load())
 		} else {
 			sleepUntil = time.Now().Add(cfg.Dns.Cache.MinTtl * time.Second)
 		}
@@ -31,21 +32,24 @@ L:
 		for k, v := range all {
 			ce := v.(*cacheEntry)
 			ck := k.(cacheKey)
-			if ce.expiration.Before(now) {
+			exp := time.Unix(0, ce.expiration.Load())
+			if exp.Before(now) {
 				q := new(dns.Msg)
 				cn := dns.CanonicalName(ck.fqdn)
 				q.SetQuestion(cn, ck.qtype)
 				c.L().Debug().Msgf("Resolving cached %s (%s)", ck.fqdn, dns.TypeToString[ck.qtype])
 				// resolve will call cache.upsert on resolved IPs
 				c.resolve(nil, q, false)
+				ceExp := time.Unix(0, ce.expiration.Load())
 				c.L().Info().Msgf("Resolved cached %s (%s), ttl:%d, expire: %s",
-					ck.fqdn, dns.TypeToString[ck.qtype], ce.ttl, ce.expiration.Format(time.RFC3339))
+					ck.fqdn, dns.TypeToString[ck.qtype], ce.ttl.Load(), ceExp.Format(time.RFC3339))
 			}
 
-			if sleepUntil.After(ce.expiration) {
+			ceExp := time.Unix(0, ce.expiration.Load())
+			if sleepUntil.After(ceExp) {
 				c.L().Trace().Msgf("Sleep until %s is less than %s (%s)", sleepUntil.Format(time.RFC3339),
-					ce.expiration.Format(time.RFC3339), ck.fqdn)
-				sleepUntil = ce.expiration
+					ceExp.Format(time.RFC3339), ck.fqdn)
+				sleepUntil = ceExp
 			}
 
 		}

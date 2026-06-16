@@ -163,15 +163,16 @@ func TestNewCacheEntry_TTL(t *testing.T) {
 	ce := newCacheEntry(msg, time.Duration(60), 1)
 
 	// TTL should be at least the minimum TTL from the message (300)
-	if ce.ttl < 300 {
-		t.Errorf("expected TTL >= 300, got %d", ce.ttl)
+	if ce.ttl.Load() < 300 {
+		t.Errorf("expected TTL >= 300, got %d", ce.ttl.Load())
 	}
 
 	// Expiration should be roughly now + TTL
-	expectedExpiry := time.Now().Add(time.Duration(ce.ttl) * time.Second)
-	diff := ce.expiration.Sub(expectedExpiry)
+	expectedExpiry := time.Now().Add(time.Duration(ce.ttl.Load()) * time.Second)
+	expiration := time.Unix(0, ce.expiration.Load())
+	diff := expiration.Sub(expectedExpiry)
 	if diff < -time.Second || diff > time.Second {
-		t.Errorf("expiration time is off by more than 1 second: expected ~%v, got %v", expectedExpiry, ce.expiration)
+		t.Errorf("expiration time is off by more than 1 second: expected ~%v, got %v", expectedExpiry, expiration)
 	}
 }
 
@@ -278,26 +279,29 @@ func TestNewCacheEntry_UpdateTtl(t *testing.T) {
 	msg := helperNewARecord(fqdn, net.ParseIP("192.168.1.1"))
 
 	ce := newCacheEntry(msg, time.Duration(60), 1)
-	oldTtl := ce.ttl
-	oldExpiration := ce.expiration
+	oldTtl := ce.ttl.Load()
+	oldExpiration := ce.expiration.Load()
 
 	// Update with a different min TTL
 	ce.updateTtl(time.Duration(120))
 
 	// TTL should still be 300 (from the record) since 300 > 120
-	if ce.ttl != oldTtl {
-		t.Errorf("TTL should remain based on record TTL when above min, was %d, now %d", oldTtl, ce.ttl)
+	if ce.ttl.Load() != oldTtl {
+		t.Errorf("TTL should remain based on record TTL when above min, was %d, now %d", oldTtl, ce.ttl.Load())
 	}
 
 	// Expiration should have been updated (should be very close to now + TTL)
-	newExpectedExpiry := time.Now().Add(time.Duration(ce.ttl) * time.Second)
-	diff := ce.expiration.Sub(newExpectedExpiry)
+	newExpectedExpiry := time.Now().Add(time.Duration(ce.ttl.Load()) * time.Second)
+	expiration := time.Unix(0, ce.expiration.Load())
+	diff := expiration.Sub(newExpectedExpiry)
 	if diff < -time.Second || diff > time.Second {
-		t.Errorf("expiration time should be refreshed after updateTtl: expected ~%v, got %v (diff: %v)", newExpectedExpiry, ce.expiration, diff)
+		t.Errorf("expiration time should be refreshed after updateTtl: expected ~%v, got %v (diff: %v)", newExpectedExpiry, expiration, diff)
 	}
 
 	// Expiration should be different from the old one (refreshed to current time)
-	if !ce.expiration.After(oldExpiration) || ce.expiration.Sub(oldExpiration) > 2*time.Second {
-		t.Errorf("expiration should be refreshed from current time within a reasonable range: old=%v, new=%v, delta=%v", oldExpiration, ce.expiration, ce.expiration.Sub(oldExpiration))
+	newExpiration := time.Unix(0, ce.expiration.Load())
+	oldExpTime := time.Unix(0, oldExpiration)
+	if !newExpiration.After(oldExpTime) || newExpiration.Sub(oldExpTime) > 2*time.Second {
+		t.Errorf("expiration should be refreshed from current time within a reasonable range: old=%v, new=%v, delta=%v", oldExpTime, newExpiration, newExpiration.Sub(oldExpTime))
 	}
 }
