@@ -2,6 +2,7 @@ package bgp
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"testing"
 
@@ -37,26 +38,25 @@ var (
 	}
 )
 
-func Serve(ctx context.Context) (e error) {
-	cfg := ctx.Value("cfg").(*config.AppCfg)
-	_bgp = &bgpSrv{
-		Loop: loop.NewLoop(1, log.L()),
-		Log:  log.NewLog(log.L(), "bgp"),
-		bgp:  bgpsrv.NewBgpServer(bgpsrv.LoggerOption(newZeroLogger(cfg.Log.Level))),
-		//ipRefCounter: hashmap.New[string, *atomic.Uint64](),
+// NewBgp creates a BGP service with explicit dependencies.
+// Returns (bgpSrv, error) — no panics.
+func NewBgp(cfg *config.AppCfg, l loop.Loop, logger *zerolog.Logger) (*bgpSrv, error) {
+	s := &bgpSrv{
+		Loop:         l,
+		Log:          log.NewLog(logger, "bgp"),
+		bgp:          bgpsrv.NewBgpServer(bgpsrv.LoggerOption(newZeroLogger(cfg.Log.Level))),
 		ipRefCounter: make(map[string]*atomic.Uint64),
 		asn:          cfg.Bgp.Asn,
 		id:           cfg.Bgp.Id,
 	}
-	go func() {
-		_bgp.bgp.Serve()
-	}()
+	go s.bgp.Serve()
 
-	ctx, _bgp.cancel = context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(context.Background())
+	s.cancel = cancel
 
-	if e = _bgp.bgp.StartBgp(ctx, &bgpapi.StartBgpRequest{
+	if e := s.bgp.StartBgp(ctx, &bgpapi.StartBgpRequest{
 		Global: &bgpapi.Global{
-			Asn:             _bgp.asn,
+			Asn:             s.asn,
 			RouterId:        cfg.Bgp.Id.String(),
 			ListenAddresses: []string{cfg.Bgp.Listen.IP.String()},
 			ListenPort:      int32(cfg.Bgp.Listen.Port),
@@ -67,7 +67,7 @@ func Serve(ctx context.Context) (e error) {
 			},
 		},
 	}); e != nil {
-		_bgp.L().Panic().Err(e).Msg("Failed to start BGP instance")
+		return nil, fmt.Errorf("bgp: start failed: %w", e)
 	}
 
 	for _, peer := range cfg.Bgp.Peers {
@@ -82,7 +82,7 @@ func Serve(ctx context.Context) (e error) {
 			},
 		}
 
-		if e = _bgp.bgp.AddPeer(ctx, &bgpapi.AddPeerRequest{
+		if e := s.bgp.AddPeer(ctx, &bgpapi.AddPeerRequest{
 			Peer: &bgpapi.Peer{
 				ApplyPolicy: pol,
 				Conf: &bgpapi.PeerConf{
@@ -118,12 +118,24 @@ func Serve(ctx context.Context) (e error) {
 				},
 			},
 		}); e != nil {
-			_bgp.L().Fatal().Err(e).Msgf("Failed to add peer %s", peer.Address.String())
+			return nil, fmt.Errorf("bgp: add peer %s failed: %w", peer.Address, e)
 		}
 	}
 
-	go _bgp.loop(ctx)
+	go s.loop(ctx)
+	return s, nil
+}
 
+// Serve creates the BGP service and stores it in the package-level _bgp global.
+// This wrapper exists for backward compatibility with Phase 2 tests.
+func Serve(ctx context.Context) (e error) {
+	cfg := ctx.Value(config.ConfigKey{}).(*config.AppCfg)
+	l := loop.NewLoop(1, log.L())
+	s, err := NewBgp(cfg, l, log.L())
+	if err != nil {
+		return err
+	}
+	_bgp = s
 	return nil
 }
 func Shutdown(ctx context.Context) (e error) {
