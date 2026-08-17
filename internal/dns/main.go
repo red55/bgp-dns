@@ -94,8 +94,10 @@ func (s *Service) Shutdown(ctx context.Context) error {
 	}
 	_ = s.cache.shutdown()
 
-	if e := s.server.ShutdownContext(shutdownCtx); e != nil && !errors.Is(e, context.Canceled) {
-		return e
+	if s.server != nil {
+		if e := s.server.ShutdownContext(shutdownCtx); e != nil && !errors.Is(e, context.Canceled) {
+			return e
+		}
 	}
 	_ = s.cache.evictByGeneration(s.cache.generation())
 	s.wg.Wait()
