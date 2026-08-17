@@ -23,10 +23,10 @@
 
 ### Code Quality Refactor
 
-- [ ] **REFACTOR-01**: Package-level singleton variables replaced with explicit struct parameters
-- [ ] **REFACTOR-02**: Context-based config passing uses typed context key instead of string key
-- [ ] **REFACTOR-03**: Panic-on-init replaced with returned errors for graceful shutdown
-- [ ] **REFACTOR-04**: Commented-out dead code removed from resolvers.go and bgp/main.go
+- [x] **REFACTOR-01**: Package-level singleton variables replaced with explicit struct parameters
+- [x] **REFACTOR-02**: Context-based config passing uses typed context key instead of string key
+- [x] **REFACTOR-03**: Panic-on-init replaced with returned errors for graceful shutdown
+- [x] **REFACTOR-04**: Commented-out dead code removed from resolvers.go and bgp/main.go
 
 ### Reliability
 
@@ -87,10 +87,10 @@
 | TEST-03 | Phase 2 | Pending |
 | TEST-04 | Phase 2 | Pending |
 | TEST-05 | Phase 2 | Complete |
-| REFACTOR-01 | Phase 3 | Pending |
-| REFACTOR-02 | Phase 3 | Pending |
-| REFACTOR-03 | Phase 3 | Pending |
-| REFACTOR-04 | Phase 3 | Pending |
+| REFACTOR-01 | Phase 3 | Complete |
+| REFACTOR-02 | Phase 3 | Complete |
+| REFACTOR-03 | Phase 3 | Complete |
+| REFACTOR-04 | Phase 3 | Complete |
 | RELIAB-01 | Phase 4 | Pending |
 | RELIAB-02 | Phase 4 | Pending |
 | RELIAB-03 | Phase 4 | Pending |
