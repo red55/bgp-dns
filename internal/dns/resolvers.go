@@ -10,6 +10,7 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/rs/zerolog"
 )
@@ -21,7 +22,10 @@ var (
 
 type resolver struct {
 	addr *net.UDPAddr
-	okay atomic.Bool
+	// client is a shared, concurrency-safe *dns.Client created once per
+	// resolver. Its cumulative Timeout comes from the configured Dns.Timeout.
+	client *dns.Client
+	okay   atomic.Bool
 }
 
 func (r *resolver) fail() {
@@ -39,9 +43,15 @@ func (r *resolver) String() string {
 	return fmt.Sprintf("%s (failed: %t)", r.addr.String(), r.isOk())
 }
 
-func newResolver(a *net.UDPAddr) (new *resolver) {
+func newResolver(a *net.UDPAddr, timeout time.Duration) (new *resolver) {
+	if timeout <= 0 {
+		timeout = 5 * time.Second
+	}
 	new = &resolver{
 		addr: a,
+		// One client per resolver, shared across concurrent queries.
+		// Only the cumulative Timeout is configured; no Dial/Read/WriteTimeout.
+		client: &dns.Client{Net: "udp", Timeout: timeout},
 	}
 	new.ok()
 	return new
@@ -53,15 +63,15 @@ type resolvers struct {
 	rs *ring.Ring
 }
 
-func newResolvers(c []*net.UDPAddr, logger *zerolog.Logger) *resolvers {
+func newResolvers(c []*net.UDPAddr, timeout time.Duration, logger *zerolog.Logger) *resolvers {
 	r := &resolvers{
 		Log: log.NewLog(logger, "resolvers"),
 	}
-	r.setResolvers(c)
+	r.setResolvers(c, timeout)
 
 	return r
 }
-func (rs *resolvers) setResolvers(c []*net.UDPAddr) {
+func (rs *resolvers) setResolvers(c []*net.UDPAddr, timeout time.Duration) {
 	rs.m.Lock()
 	defer rs.m.Unlock()
 
@@ -69,7 +79,7 @@ func (rs *resolvers) setResolvers(c []*net.UDPAddr) {
 	rs.rs = ring.New(l)
 
 	iter.ForEach(c, func(a **net.UDPAddr) {
-		rs.rs.Value = newResolver(*a)
+		rs.rs.Value = newResolver(*a, timeout)
 		rs.rs = rs.rs.Next()
 	})
 }
@@ -88,7 +98,7 @@ func (rs *resolvers) query(q *dns.Msg) (*dns.Msg, error) {
 		rs.L().Debug().Msgf("Using DNS %v for %s (%s)",
 			srv.addr, q.Question[0].Name, dns.TypeToString[q.Question[0].Qtype])
 
-		if a, e := dns.Exchange(q, srv.addr.String()); e == nil && len(a.Answer) > 0 {
+		if a, _, e := srv.client.Exchange(q, srv.addr.String()); e == nil && len(a.Answer) > 0 {
 			rs.L().Trace().Msgf("Got answer %s", a.Answer[0].String())
 			srv.ok()
 			return a, nil

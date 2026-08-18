@@ -18,6 +18,7 @@ type dnsCfg struct {
 	Listen    *net.UDPAddr   `yaml:"Listen" json:"Listen"`
 	Resolvers []*net.UDPAddr `yaml:"Resolvers" json:"Resolvers"`
 	List      listCfg        `yaml:"List" json:"List"`
-	Cache	  cacheCfg		 `yaml:"Cache" json:"Cache"`
+	Cache     cacheCfg       `yaml:"Cache" json:"Cache"`
+	Timeout   time.Duration  `yaml:"Timeout" json:"Timeout"`
 }
 

@@ -1,26 +1,27 @@
 package utils
 
+// Difference returns the elements present in slice1 but absent from slice2,
+// preserving slice1's original relative order. Membership testing is
+// map-based, so the function runs in O(len(slice1)+len(slice2)) instead of
+// the previous nested-loop quadratic scan. Duplicate entries collapse to a
+// single occurrence — intentional: callers feed BGP ref-counted /32
+// operations where duplicates carry no meaning (Advance gates on the first
+// reference, Withdraw on the last, so duplicate IPs within one call were
+// always a no-op even under the old occurrence-preserving behavior).
+// Nil slices behave as empty.
 func Difference(slice1 []string, slice2 []string) (diff []string) {
+	inSlice2 := make(map[string]struct{}, len(slice2))
+	for _, s := range slice2 {
+		inSlice2[s] = struct{}{}
+	}
 
-	// Loop two times, first to find slice1 strings not in slice2,
-	// second loop to find slice2 strings not in slice1
-	for i := 0; i < 1; i++ {
-		for _, s1 := range slice1 {
-			found := false
-			for _, s2 := range slice2 {
-				if s1 == s2 {
-					found = true
-					break
-				}
+	added := make(map[string]struct{})
+	for _, s := range slice1 {
+		if _, ok := inSlice2[s]; !ok {
+			if _, dup := added[s]; !dup {
+				diff = append(diff, s)
+				added[s] = struct{}{}
 			}
-			// String not found. We add it to return slice
-			if !found {
-				diff = append(diff, s1)
-			}
-		}
-		// Swap the slices, only if it was the first loop
-		if i == 0 {
-			slice1, slice2 = slice2, slice1
 		}
 	}
 

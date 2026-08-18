@@ -85,7 +85,7 @@ func setupE2EEnv(t *testing.T, domain, ip string) *cache {
 
 	// 3. Create cache with resolver pointing to fake DNS server
 	l := zerolog.New(os.Stderr).Level(zerolog.WarnLevel)
-	resolvers := newResolvers([]*net.UDPAddr{mustResolveUDP(t, fakeAddr)}, &l)
+	resolvers := newResolvers([]*net.UDPAddr{mustResolveUDP(t, fakeAddr)}, 0, &l)
 	c := newCache(100, time.Duration(60), resolvers, &l, config.TestConfig(), loop.NewLoop(1, &l))
 
 	// 4. Register domain in cache mux (triggers auto-lookup for A + HTTPS)
@@ -145,7 +145,7 @@ func TestE2E_MultiDomainIPSharing(t *testing.T) {
 
 	// 3. Create cache with resolver pointing to fake DNS server
 	l := zerolog.New(os.Stderr).Level(zerolog.WarnLevel)
-	resolvers := newResolvers([]*net.UDPAddr{mustResolveUDP(t, fakeAddr)}, &l)
+	resolvers := newResolvers([]*net.UDPAddr{mustResolveUDP(t, fakeAddr)}, 0, &l)
 	c := newCache(100, time.Duration(60), resolvers, &l, config.TestConfig(), loop.NewLoop(1, &l))
 
 	// 4. Register both domains (each triggers auto-lookup for A + HTTPS)

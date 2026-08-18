@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"reflect"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -49,6 +50,14 @@ func Init(path string) (*AppCfg, error) {
 					return nil, e
 				}
 			}
+
+			if to == reflect.TypeOf(time.Duration(0)) {
+				d, e := time.ParseDuration(data.(string))
+				if e != nil {
+					return nil, e
+				}
+				return d, nil
+			}
 		}
 
 		return data, nil
@@ -57,6 +66,16 @@ func Init(path string) (*AppCfg, error) {
 	if err = viper.Unmarshal(cfg, viper.DecodeHook(decodeHook)); err != nil {
 		return nil, fmt.Errorf("error loading config file into memory, %w", err)
 	}
+
+	switch {
+	case cfg.Dns.Timeout <= 0:
+		// Absent or misparsed (e.g. bare YAML integer decoded to nanoseconds):
+		// fall back to the documented default instead of rejecting.
+		cfg.Dns.Timeout = 5 * time.Second
+	case cfg.Dns.Timeout < 3*time.Second || cfg.Dns.Timeout > 30*time.Second:
+		return nil, fmt.Errorf("dns: timeout %v out of range (allowed: 3s-30s)", cfg.Dns.Timeout)
+	}
+
 	var listFile string
 	listFile, _ = filepath.Abs(cfg.Dns.List.File)
 	cfg.Dns.List.File = strings.ReplaceAll(listFile, "\\", string(os.PathSeparator))

@@ -27,7 +27,7 @@ func newResolversWithLogger(l *zerolog.Logger) *resolvers {
 	r := &resolvers{
 		Log: log.NewLog(l, "resolvers"),
 	}
-	r.setResolvers(nil)
+	r.setResolvers(nil, 0)
 	return r
 }
 

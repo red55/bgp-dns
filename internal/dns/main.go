@@ -45,7 +45,7 @@ func NewDns(cfg *config.AppCfg, l loop.Loop, logger *zerolog.Logger) (*Service, 
 		Log:  log.NewLog(logger, "dns"),
 	}
 
-	s.resolvers = newResolvers(cfg.Dns.Resolvers, logger)
+	s.resolvers = newResolvers(cfg.Dns.Resolvers, cfg.Dns.Timeout, logger)
 	s.cache = newCache(cfg.Dns.Cache.MaxEntries, cfg.Dns.Cache.MinTtl, s.resolvers, logger, cfg, l)
 	mux := newRegexServeMux()
 	s.cache.SetMux(mux)

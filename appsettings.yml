@@ -23,6 +23,7 @@ Dns:
   Cache:
     MinTtl: 10
     MaxEntries: 5000
+  Timeout: 5s
   List:
     File: sample\my.lst
     Resolvers:

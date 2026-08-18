@@ -5,6 +5,7 @@ import (
 	"os"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/miekg/dns"
 	"github.com/rs/zerolog"
@@ -31,7 +32,7 @@ func newTestResolvers(t *testing.T, addrs []string) *resolvers {
 		udpAddrs[i] = addr
 	}
 	l := zerolog.New(os.Stdout).Level(zerolog.WarnLevel)
-	return newResolvers(udpAddrs, &l)
+	return newResolvers(udpAddrs, 0, &l)
 }
 
 // fakeDNSServer creates a DNS server that calls the given handler.
@@ -288,4 +289,59 @@ func startFakeServer(t *testing.T, handler dns.HandlerFunc) string {
 	srv, addr := newFakeDNSServer(t, handler)
 	t.Cleanup(func() { srv.Shutdown() })
 	return addr
+}
+
+// ---------------------------------------------------------------------------
+// Test: Timeout
+// ---------------------------------------------------------------------------
+
+// TestResolver_Timeout verifies that queries against an unresponsive upstream
+// fail under the configured client timeout instead of the library default,
+// and that fast well-behaved responses still succeed with the same client.
+func TestResolver_Timeout(t *testing.T) {
+	// Silent listener: accepts datagrams but never replies.
+	l, err := net.ListenPacket("udp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	done := make(chan struct{})
+	go func() {
+		buf := make([]byte, 1500)
+		for {
+			if _, _, e := l.ReadFrom(buf); e != nil {
+				close(done)
+				return
+			}
+		}
+	}()
+	t.Cleanup(func() { l.Close(); <-done })
+
+	addr, err := net.ResolveUDPAddr("udp", l.LocalAddr().String())
+	if err != nil {
+		t.Fatalf("resolve: %v", err)
+	}
+
+	initTestLogger()
+	lg := zerolog.New(os.Stdout).Level(zerolog.WarnLevel)
+	rs := newResolvers([]*net.UDPAddr{addr}, 3*time.Second, &lg)
+	q := newTestMsg("example.com.", dns.TypeA)
+
+	start := time.Now()
+	resp, err := rs.query(q)
+	elapsed := time.Since(start)
+	if err == nil {
+		t.Fatalf("expected timeout error against silent upstream, got answer %v", resp)
+	}
+	if elapsed >= 6*time.Second {
+		t.Errorf("query took %v; expected the 3s cumulative client deadline to bound it well below 6s", elapsed)
+	}
+
+	// Control: a fast fake server succeeds with the same client/timeout config.
+	fastAddr := startFakeServer(t, func(w dns.ResponseWriter, r *dns.Msg) {
+		w.WriteMsg(makeSuccessMsg(r))
+	})
+	rsFast := newTestResolvers(t, []string{fastAddr})
+	if resp, err := rsFast.query(q); err != nil || len(resp.Answer) == 0 {
+		t.Fatalf("control query against fast server failed: resp=%v err=%v", resp, err)
+	}
 }
