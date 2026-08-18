@@ -1,6 +1,7 @@
 # Phase 04: Reliability - Context
 
 **Gathered:** 2026-08-17
+**Updated:** 2026-08-18 (D-04/D-05 re-verified against code and LOCKED; config naming conflict resolved)
 **Status:** Ready for planning
 
 <domain>
@@ -20,12 +21,25 @@ Fix four known reliability gaps (RELIAB-01 through RELIAB-04): DNS query timeout
 - **D-12:** Collapse duplicate entries within each half of the output (membership check before append). This is a deliberate, documented improvement over today's loop-through-every-matching-occurrence behavior — the two call sites (`arrived`/`gone`) feed set-membership BGP operations that do not care about multiplicity. — **Reversibility:** costly — reverting D-12's dedup requires re-introducing occurrence-counting logic and updating any future test that asserts on degenerate duplicate inputs.
 - **D-13:** No special-case guards needed for empty/nil input slices. First-ever cache entry (empty `prevIps`) and zero-IP resolution results are normal cases the algorithm already handles correctly; do not add redundant nil checks in `Difference()` itself.
 
-### Carried Forward From Prior In-Session Conversation (NOT re-verified against current code this session)
+### Verified Against Current Code (2026-08-18, post Phase 3)
 
-The following were resolved in an earlier conversation recorded in `.continue-here.md` BEFORE this discussion ran. They are restated here so the planner has them in one file, but per the anti-pattern note below ("Re-confirm GA 1 & 2" was offered but NOT selected), **planner/researcher should treat these as candidate decisions, not verified facts** — confirm current code state (`resolvers.go` exchange calls, `bgp` package context usage) before building plans on top of them.
+The two prior-session decisions were re-confirmed against the live source tree. They are now **LOCKED** (previously "candidate, not verified").
 
-- **D-04 (RELIAB-01, DNS timeout):** Single global `Dns.Timeout` config value (proposed: flat field, not a per-resolver map), default 5s, accepted range 3–30s, one cached `*dns.Client` per resolver instance (not a fresh client per query). *Unresolved naming conflict: ROADMAP success criterion #1 reads `Dns.Timeouts.Query` — flat vs nested key name was offered as a discussable gray area but skipped; downstream agent implementing this must pick one and keep it consistent between the config struct tag and any docs/comments. Flagged as open.*
-- **D-05 (RELIAB-03, BGP context propagation):** Store the daemon lifecycle context on `bgpSrv.ctx` (not recreate `context.Background()` per call); `NewBgp(ctx, cfg, loop, logger)` signature change threaded through from `cmd/bgp-dnsd/main.go`; shutdown path calls `s.cancel()` which propagates cancellation to in-flight GoBGP API calls. Test helper `NewBgpSrvForTest` also takes a context parameter.
+- **D-04 (RELIAB-01, DNS timeout) — LOCKED & VERIFIED:**
+  - Single global `Dns.Timeout` — **flat field on `dnsCfg`** (`Timeout time.Duration \`yaml:"Timeout"\``). **Naming conflict resolved in favor of flat**: pre-existing config style is flat sub-fields (`Cache.MinTtl`, `Cache.MaxEntries`) and the flat name was the earlier explicit decision; ROADMAP SC-1 wording `Dns.Timeouts.Query` is superseded. Apply consistently across config struct tag, docs/comments, and tests.
+  - Default 5s, validated range 3–30s (enforce in config init alongside existing validation).
+  - Per-resolver cached `*dns.Client`: add `client *dns.Client` to the `resolver` struct, built in `newResolver` from the configured duration (`Timeout` + `ReadTimeout`). `dns.Exchange` calls become `r.client.Exchange(q, r.addr.String())` — same behavior, bounded latency.
+  - Threading: `newResolvers(addrs, timeout, logger)` gains a `timeout` param; sole production caller is `internal/dns/main.go:48`; in-package test helpers pass `0` (→ default) or an explicit short value where timing is under test.
+  - Verification evidence: query path is bare `dns.Exchange(q, srv.addr.String())` with no client; `dnsCfg` has no timeout field today.
+
+- **D-05 (RELIAB-03, BGP context propagation) — LOCKED & VERIFIED:**
+  - `NewBgp(ctx, cfg, l, logger)` — takes the daemon lifecycle context (Go convention: ctx first). Internally derives a child: `cctx, cancel := context.WithCancel(ctx)`; stores `s.ctx = cctx`, `s.cancel = cancel`. Keeps `Shutdown()` owning cancellation while the daemon's parent cancel propagates on signal.
+  - `bgpSrv` gains a `ctx context.Context` field beside the existing `cancel context.CancelFunc` (no other struct change).
+  - All three `context.Background()` call sites in `bgp.go` (`add`, `find`, `remove`) switch to `s.ctx`; the `//TODO: pass context` marker disappears.
+  - `cmd/bgp-dnsd/main.go:83` passes the daemon ctx (already in scope, currently unused at that call site).
+  - Legacy shim `bgp.Serve(ctx)` already accepts ctx and discards it — after the change it forwards ctx to `NewBgp` (no test churn).
+  - `NewBgpSrvForTest(t)` needs **no signature change**: it builds `bgpSrv` directly, so it creates its own `WithCancel(Background())` and stores it in `s.ctx` (the returned `cancel` already covers cleanup).
+  - Verification evidence: `bgp.go` carries `//TODO: pass context`; `find`/`remove` use `context.Background()`; `NewBgp` today creates its own `WithCancel(Background())`, so the daemon lifecycle is not propagated.
 - **D-06 (RELIAB-04, BGP error logging severity/context):** Not discussed this session or the prior one. ROADMAP success criterion #4 and REQUIREMENTS.md both point to Warn level with peer-IP context, but no explicit user decision was captured on exact log format, structured fields, or whether `Advance`/`Withdraw` failures versus lower-level GoBGP API errors get different treatment. Planner should decide within those stated constraints unless user raises a preference when seeing the plan.
 
 ### Scope Guardrail Note
@@ -97,10 +111,12 @@ No external ADR/spec documents govern this phase; requirements fully captured in
 Carried-forward items explicitly offered for discussion this session but NOT addressed — leaving them unblocked for the planning stage rather than guessing at answers now:
 
 1. **GA 3 — BGP error logging (RELIAB-04)** severity/structured-field specifics beyond what ROADMAP already fixes (Warn level, peer IP context). Open question left to planner within those stated bounds.
-2. **Config key naming conflict** — `Dns.Timeout` (prior session) vs `Dns.Timeouts.Query` (ROADMAP SC-1 wording). Not settled by discussion; needs one consistent choice applied across config struct + docs when implementation happens.
-3. **Verification status** of the prior-session GA 1/GA 2 decisions (D-04, D-05 above) against the actual current source tree, since that conversation happened before further commits landed in Phase 3's later waves.
 
-None of these expand scope — they're refinements of decisions already inside Phase 4's four locked requirements, just not yet nailed down past the roadmapiel level.
+Resolved since last revision (no longer open):
+- ~~Config key naming conflict (`Dns.Timeout` vs `Dns.Timeouts.Query`)~~ — **RESOLVED 2026-08-18**: flat `Dns.Timeout`, see D-04 above.
+- ~~Verification of prior-session GA 1/GA 2 decisions against current code~~ — **DONE 2026-08-18**: both re-verified and LOCKED, see "Verified Against Current Code" section above.
+
+None of these expand scope — they're refinements of decisions already inside Phase 4's four locked requirements, just not yet nailed down past the roadmap-level.
 
 </deferred>
 
