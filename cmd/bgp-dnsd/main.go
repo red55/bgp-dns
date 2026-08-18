@@ -57,7 +57,7 @@ func main() {
 	signal.Notify(c, os.Interrupt)
 
 	// BGP service — created via constructor for deferred cleanup
-	bgpSrv, e := bgp.NewBgp(cfg, loop.NewLoop(1, log.L()), log.L())
+	bgpSrv, e := bgp.NewBgp(ctx, cfg, loop.NewLoop(1, log.L()), log.L())
 	if e != nil {
 		_app.StdErr(e, "failed to start BGP service")
 		os.Exit(1)

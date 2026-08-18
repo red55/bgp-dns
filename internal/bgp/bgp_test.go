@@ -7,6 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/red55/bgp-dns/internal/log"
 	"github.com/red55/bgp-dns/internal/loop"
@@ -352,4 +353,47 @@ func TestMain(m *testing.M) {
 	// Initialize log before any tests run
 	log.Init(zerolog.WarnLevel)
 	os.Exit(m.Run())
+}
+
+// TestBgpSrv_ContextStored verifies that NewBgpSrvForTest stores its
+// internally-created context in srv.ctx so the ops methods (add/find/remove)
+// observe a non-nil context. Guards the "helper forgets to store ctx" regression.
+func TestBgpSrv_ContextStored(t *testing.T) {
+	srv, _ := NewBgpSrvForTest(t)
+	if srv.ctx == nil {
+		t.Fatal("srv.ctx is nil after NewBgpSrvForTest")
+	}
+}
+
+// TestBgpSrv_CancelExitsLoop verifies that cancelling the stored context exits
+// the loop goroutine: wg.Wait returns once ctx is done. The 5s deadline makes
+// the test fail instead of hang if the cancellation wiring regresses.
+// Note: this constructs a bare srv (no GoBGP server) and never pushes ops into
+// a BgpServer that was never StartBgp'd — mgmtCh would never be drained.
+func TestBgpSrv_CancelExitsLoop(t *testing.T) {
+	l := zerolog.New(io.Discard).Level(zerolog.WarnLevel)
+	srv := &bgpSrv{
+		Loop:         loop.NewLoop(1, &l),
+		Log:          log.NewLog(&l, "bgp"),
+		ipRefCounter: make(map[string]*atomic.Uint64),
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	srv.ctx = ctx
+
+	go srv.loop(srv.ctx)
+
+	done := make(chan struct{})
+	go func() {
+		srv.wg.Wait()
+		close(done)
+	}()
+
+	cancel()
+
+	select {
+	case <-done:
+		// loop exited after cancellation
+	case <-time.After(5 * time.Second):
+		t.Fatal("loop did not exit within 5s of context cancellation")
+	}
 }

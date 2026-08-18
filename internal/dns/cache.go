@@ -55,7 +55,7 @@ func (c *cache) onEntryEvicted(k interface{}, v interface{}) {
 	ck := k.(cacheKey)
 	c.L().Debug().Msgf("Evicting %s", ck)
 	if e := bgp.Withdraw(v.(*cacheEntry).Ip4s()); e != nil {
-		c.L().Error().Err(e).Msgf("Failed to withdraw IPs for %s", ck)
+		c.L().Warn().Err(e).Msgf("Failed to withdraw IPs for %s", ck)
 	}
 }
 

@@ -1,6 +1,5 @@
 package bgp
 import (
-	"context"
 	"fmt"
 	bgpapi "github.com/osrg/gobgp/v3/api"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -43,8 +42,7 @@ func (s *bgpSrv) add(prefix *bgpapi.IPAddressPrefix, asn uint32) error {
 	}
 
 	s.L().Info().Msgf("Adding prefix: %s", prefix.String())
-	//TODO: pass context
-	if _, e := s.bgp.AddPath(context.Background(), &bgpapi.AddPathRequest{
+	if _, e := s.bgp.AddPath(s.ctx, &bgpapi.AddPathRequest{
 		Path: newBgpPath(prefix, asn, s.id.String()),
 	}); e != nil {
 		return fmt.Errorf("unable to add path: %v, %w", prefix, e)
@@ -68,7 +66,7 @@ func (s *bgpSrv) find(prefixes []*bgpapi.IPAddressPrefix) (found *bgpapi.IPAddre
 		}
 	}
 
-	if e = s.bgp.ListPath(context.Background(), &bgpapi.ListPathRequest{
+	if e = s.bgp.ListPath(s.ctx, &bgpapi.ListPathRequest{
 		TableType: bgpapi.TableType_GLOBAL,
 		Family:    _v4Family,
 		Prefixes:  tl,
@@ -103,7 +101,7 @@ func (s *bgpSrv) remove(prefix *bgpapi.IPAddressPrefix, asn uint32) error {
 	s.L().Info().Msgf("Removing prefix: %s, found: %t", prefix.String(), found != nil)
 
 	if found != nil {
-		e := s.bgp.DeletePath(context.Background(), &bgpapi.DeletePathRequest{
+		e := s.bgp.DeletePath(s.ctx, &bgpapi.DeletePathRequest{
 			Path: newBgpPath(prefix, asn, s.id.String()),
 		})
 		return e

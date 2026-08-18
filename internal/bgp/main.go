@@ -20,12 +20,14 @@ import (
 type bgpSrv struct {
 	loop.Loop
 	log.Log
-	bgp *bgpsrv.BgpServer
+	bgp          *bgpsrv.BgpServer
 	ipRefCounter map[string]*atomic.Uint64
 	cancel       context.CancelFunc
+	ctx          context.Context
 	wg           sync.WaitGroup
 	asn          uint32
 	id           net.IP
+	peers        []string
 }
 
 var (
@@ -38,8 +40,10 @@ var (
 )
 
 // NewBgp creates a BGP service with explicit dependencies.
+// The provided ctx becomes the parent of the service's internal context:
+// cancelling it stops the operation loop and reaches every GoBGP API call.
 // Returns (bgpSrv, error) — no panics.
-func NewBgp(cfg *config.AppCfg, l loop.Loop, logger *zerolog.Logger) (*bgpSrv, error) {
+func NewBgp(ctx context.Context, cfg *config.AppCfg, l loop.Loop, logger *zerolog.Logger) (*bgpSrv, error) {
 	s := &bgpSrv{
 		Loop:         l,
 		Log:          log.NewLog(logger, "bgp"),
@@ -50,10 +54,11 @@ func NewBgp(cfg *config.AppCfg, l loop.Loop, logger *zerolog.Logger) (*bgpSrv, e
 	}
 	go s.bgp.Serve()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	cctx, cancel := context.WithCancel(ctx)
+	s.ctx = cctx
 	s.cancel = cancel
 
-	if e := s.bgp.StartBgp(ctx, &bgpapi.StartBgpRequest{
+	if e := s.bgp.StartBgp(cctx, &bgpapi.StartBgpRequest{
 		Global: &bgpapi.Global{
 			Asn:             s.asn,
 			RouterId:        cfg.Bgp.Id.String(),
@@ -69,6 +74,12 @@ func NewBgp(cfg *config.AppCfg, l loop.Loop, logger *zerolog.Logger) (*bgpSrv, e
 		return nil, fmt.Errorf("bgp: start failed: %w", e)
 	}
 
+	peers := make([]string, 0, len(cfg.Bgp.Peers))
+	for _, p := range cfg.Bgp.Peers {
+		peers = append(peers, p.Address.IP.String())
+	}
+	s.peers = peers
+
 	for _, peer := range cfg.Bgp.Peers {
 		pol := &bgpapi.ApplyPolicy{
 			ImportPolicy: &bgpapi.PolicyAssignment{
@@ -81,7 +92,7 @@ func NewBgp(cfg *config.AppCfg, l loop.Loop, logger *zerolog.Logger) (*bgpSrv, e
 			},
 		}
 
-		if e := s.bgp.AddPeer(ctx, &bgpapi.AddPeerRequest{
+		if e := s.bgp.AddPeer(cctx, &bgpapi.AddPeerRequest{
 			Peer: &bgpapi.Peer{
 				ApplyPolicy: pol,
 				Conf: &bgpapi.PeerConf{
@@ -121,7 +132,7 @@ func NewBgp(cfg *config.AppCfg, l loop.Loop, logger *zerolog.Logger) (*bgpSrv, e
 		}
 	}
 
-	go s.loop(ctx)
+	go s.loop(cctx)
 	return s, nil
 }
 
@@ -130,13 +141,14 @@ func NewBgp(cfg *config.AppCfg, l loop.Loop, logger *zerolog.Logger) (*bgpSrv, e
 func Serve(ctx context.Context) (e error) {
 	cfg := ctx.Value(config.ConfigKey{}).(*config.AppCfg)
 	l := loop.NewLoop(1, log.L())
-	s, err := NewBgp(cfg, l, log.L())
+	s, err := NewBgp(ctx, cfg, l, log.L())
 	if err != nil {
 		return err
 	}
 	_bgp = s
 	return nil
 }
+
 // Shutdown shuts down the BGP service.
 func Shutdown(ctx context.Context) (e error) {
 	if _bgp == nil {
@@ -179,6 +191,16 @@ func Advance(ips []string) error {
 					Prefix:    ip,
 				}
 				e = _bgp.add(prefix, _bgp.asn)
+				if e != nil {
+					_bgp.L().Warn().
+						Str("op", "advance").
+						Str("ip", ip).
+						Str("router_id", _bgp.id.String()).
+						Strs("peers", _bgp.peers).
+						Err(e).
+						Msg("BGP advance failed")
+					return
+				}
 			} else {
 				_bgp.L().Debug().Msgf("Advance IPs: No need to change BGP, %v(%d)", ip, c)
 			}
@@ -204,6 +226,7 @@ func NewBgpSrvForTest(t testing.TB) (*bgpSrv, context.CancelFunc) {
 		ipRefCounter: make(map[string]*atomic.Uint64),
 	}
 	ctx, cancel := context.WithCancel(context.Background())
+	srv.ctx = ctx
 	go srv.loop(ctx)
 	t.Cleanup(cancel)
 	return srv, cancel
@@ -237,7 +260,13 @@ func Withdraw(ips []string) error {
 						Prefix:    ip,
 					}
 					if e = _bgp.remove(prefix, _bgp.asn); e != nil {
-						_bgp.L().Error().Err(e)
+						_bgp.L().Warn().
+							Str("op", "withdraw").
+							Str("ip", ip).
+							Str("router_id", _bgp.id.String()).
+							Strs("peers", _bgp.peers).
+							Err(e).
+							Msg("BGP withdraw failed")
 					}
 					delete(_bgp.ipRefCounter, ip)
 				} else {
