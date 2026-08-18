@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/miekg/dns"
 	"github.com/red55/bgp-dns/internal/log"
-	"github.com/sourcegraph/conc/iter"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -78,10 +77,10 @@ func (rs *resolvers) setResolvers(c []*net.UDPAddr, timeout time.Duration) {
 	l := len(c)
 	rs.rs = ring.New(l)
 
-	iter.ForEach(c, func(a **net.UDPAddr) {
-		rs.rs.Value = newResolver(*a, timeout)
+	for _, a := range c {
+		rs.rs.Value = newResolver(a, timeout)
 		rs.rs = rs.rs.Next()
-	})
+	}
 }
 
 func (rs *resolvers) query(q *dns.Msg) (*dns.Msg, error) {

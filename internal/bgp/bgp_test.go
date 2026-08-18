@@ -366,10 +366,13 @@ func TestBgpSrv_ContextStored(t *testing.T) {
 }
 
 // TestBgpSrv_CancelExitsLoop verifies that cancelling the stored context exits
-// the loop goroutine: wg.Wait returns once ctx is done. The 5s deadline makes
-// the test fail instead of hang if the cancellation wiring regresses.
+// the loop goroutine once its blocking select observes ctx.Done. The 5s
+// deadline makes the test fail instead of hang if the cancellation wiring
+// regresses.
 // Note: this constructs a bare srv (no GoBGP server) and never pushes ops into
 // a BgpServer that was never StartBgp'd — mgmtCh would never be drained.
+// The done signal comes from the loop call itself returning (not from
+// wg.Wait racing ahead of the loop's wg.Add).
 func TestBgpSrv_CancelExitsLoop(t *testing.T) {
 	l := zerolog.New(io.Discard).Level(zerolog.WarnLevel)
 	srv := &bgpSrv{
@@ -380,12 +383,10 @@ func TestBgpSrv_CancelExitsLoop(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	srv.ctx = ctx
 
-	go srv.loop(srv.ctx)
-
 	done := make(chan struct{})
 	go func() {
-		srv.wg.Wait()
-		close(done)
+		defer close(done)
+		srv.loop(srv.ctx)
 	}()
 
 	cancel()
