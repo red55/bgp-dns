@@ -72,6 +72,19 @@ func TestGRPC_ServeShutdown(t *testing.T) {
 	// Direct call: nil → InvalidArgument (nil check)
 	assert.Contains(t, []codes.Code{codes.InvalidArgument, codes.FailedPrecondition}, st.Code(),
 		"ReloadList should return InvalidArgument (direct nil) or FailedPrecondition (gRPC serializes nil)")
+
+	// Non-nil passes the gate: a valid but empty-bodied request traverses the
+	// unified interceptor chain without being rejected, reaching business
+	// logic. Failing with exactly FailedPrecondition (not InvalidArgument)
+	// pins that the request arrived at the handler itself.
+	_, err = client.ClearCache(context.Background(), &api.ClearCacheRequest{})
+	require.Error(t, err)
+	st, ok := status.FromError(err)
+	require.True(t, ok, "error should be a gRPC status error")
+	assert.NotEqual(t, codes.InvalidArgument, st.Code(),
+		"valid empty-but-non-nil request must not be rejected by the validation gate")
+	assert.Equal(t, codes.FailedPrecondition, st.Code(),
+		"non-nil ClearCache should reach business logic (cache not initialized)")
 }
 
 // TestGRPC_ListCacheEntries_Uninitialized verifies that ListCacheEntries
@@ -121,6 +134,31 @@ func TestGRPC_ReloadList_NilRequest(t *testing.T) {
 	require.True(t, ok, "error should be a gRPC status error")
 	assert.Equal(t, codes.InvalidArgument, st.Code(), "ReloadList should return InvalidArgument for nil request")
 	assert.Contains(t, st.Message(), "nil", "error message should mention nil request")
+}
+
+// TestGRPC_ClearCache_NilRequest verifies that ClearCache returns
+// InvalidArgument when called directly with a nil request.
+// Note: over the wire, gRPC serializes a nil proto message to an empty
+// message, so the nil check is exercised by calling the method directly.
+func TestGRPC_ClearCache_NilRequest(t *testing.T) {
+	s := &CacheCliServiceImpl{}
+	_, err := s.ClearCache(context.Background(), nil)
+	require.Error(t, err)
+	st, ok := status.FromError(err)
+	require.True(t, ok, "error should be a gRPC status error")
+	assert.Equal(t, codes.InvalidArgument, st.Code(), "ClearCache should return InvalidArgument for nil request")
+}
+
+// TestGRPC_ListCacheEntries_NilStream verifies that ListCacheEntries returns
+// InvalidArgument when called directly with a nil stream (direct call, since
+// the stream cannot be transmitted as nil over the wire).
+func TestGRPC_ListCacheEntries_NilStream(t *testing.T) {
+	s := &CacheCliServiceImpl{}
+	err := s.ListCacheEntries(nil, nil)
+	require.Error(t, err)
+	st, ok := status.FromError(err)
+	require.True(t, ok, "error should be a gRPC status error")
+	assert.Equal(t, codes.InvalidArgument, st.Code(), "ListCacheEntries should return InvalidArgument for nil stream")
 }
 
 // TestGRPC_ReloadList_Uninitialized verifies that ReloadList returns
