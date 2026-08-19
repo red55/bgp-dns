@@ -126,6 +126,14 @@ Plans:
 
 **Dependencies:** Phase 3 refactoring makes auth wiring cleaner (config struct changes).
 
+**Plans:** 3 planned
+
+Plans:
+
+- [ ] 05-01-PLAN.md — Tracer: unix socket 0600 + unified gRPC validation gate (SEC-01, SEC-02)
+- [ ] 05-02-PLAN.md — DNS qtype filter for listed domains: serve A/AAAA/HTTPS, REFUSED otherwise (SEC-03)
+- [ ] 05-03-PLAN.md — Optional BGP peer AuthPassword → GoBGP spec + operator docs (SEC-04)
+
 ---
 
 ## Phase Dependencies
