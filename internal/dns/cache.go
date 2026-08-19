@@ -139,6 +139,38 @@ func (c *cache) findKeysByGeneration(gen uint64) []string {
 
 var requestTypes = []uint16{dns.TypeA, dns.TypeHTTPS}
 
+// servedQTypes is the POLICY SET of query types served for LISTED domains
+// (SEC-03). It is deliberately SEPARATE from requestTypes above (the prefetch
+// set) — serving AAAA must not trigger any new prefetch or announce behavior;
+// BGP announcement stays IPv4-A-only by contract.
+var servedQTypes = []uint16{dns.TypeA, dns.TypeAAAA, dns.TypeHTTPS}
+
+// refuseIfNotServed answers REFUSED for listed-domain queries whose qtype is
+// outside servedQTypes and reports true when the caller must return without
+// resolving. An empty question is malformed network input and is refused too
+// (fail closed at the trust boundary between DNS input and resolver).
+func (c *cache) refuseIfNotServed(w dns.ResponseWriter, r *dns.Msg) (refused bool) {
+	if len(r.Question) > 0 && containsQType(servedQTypes, r.Question[0].Qtype) {
+		return false
+	}
+	resp := new(dns.Msg)
+	resp.SetReply(r)
+	resp.Rcode = dns.RcodeRefused
+	if e := w.WriteMsg(resp); e != nil {
+		c.L().Error().Err(e).Msg("Failed to write refusal to client")
+	}
+	return true
+}
+
+func containsQType(types []uint16, qtype uint16) bool {
+	for _, t := range types {
+		if t == qtype {
+			return true
+		}
+	}
+	return false
+}
+
 func (c *cache) register(fqdn string) error {
 	return c.registerOn(fqdn, c.mux, true)
 }
@@ -149,6 +181,9 @@ func (c *cache) registerOn(fqdn string, targetMux *regexServeMux, doLookup bool)
 	}
 	cn := dns.CanonicalName(fqdn)
 	targetMux.HandleFunc(cn, func(rw dns.ResponseWriter, m *dns.Msg) {
+		if c.refuseIfNotServed(rw, m) {
+			return
+		}
 		c.resolve(rw, m, true)
 	})
 	if doLookup {
@@ -174,6 +209,9 @@ func (c *cache) registerRegex(pattern string) error {
 func (c *cache) registerRegexOn(fqdn string, targetMux *regexServeMux) error {
 	pattern := strings.TrimPrefix(fqdn, "regex:")
 	return targetMux.HandleRegex(pattern, func(w dns.ResponseWriter, r *dns.Msg) {
+		if c.refuseIfNotServed(w, r) {
+			return
+		}
 		c.resolve(w, r, true)
 	})
 }
