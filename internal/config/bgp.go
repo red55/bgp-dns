@@ -9,6 +9,9 @@ type bgpNeighbor struct {
 	Address     net.TCPAddr `yaml:"Addressess" json:"Addressess"`
 	Multihop    bool        `yaml:"Multihop" json:"Multihop"`
 	PassiveMode bool        `yaml:"PassiveMode" json:"PassiveMode"`
+	// AuthPassword is the optional TCP-MD5 session key for this peer
+	// (RFC 2385/5925), applied by GoBGP when non-empty; empty = unauthenticated.
+	AuthPassword string `yaml:"AuthPassword" json:"AuthPassword"`
 }
 
 type bgpCfg struct {

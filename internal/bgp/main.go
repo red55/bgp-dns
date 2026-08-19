@@ -39,6 +39,72 @@ var (
 	}
 )
 
+// peerSpecInput carries the per-peer scalars needed to assemble a GoBGP
+// Peer spec. Private; mirrors the config fields buildPeerSpec consumes.
+type peerSpecInput struct {
+	Asn                uint32
+	NeighborAddress    string
+	Multihop           bool
+	PassiveMode        bool
+	ListenLocalAddress string
+	AuthPassword       string
+}
+
+// buildPeerSpec assembles the full per-peer *bgpapi.Peer for AddPeer. Pure
+// function (no server, no state) so the config→spec mapping is unit-testable
+// without CAP_NET_ADMIN. The AuthPassword field is the optional RFC 2385/5925
+// TCP-MD5 session key — GoBGP applies it via setTCPMD5SigSockopt when
+// non-empty; empty leaves sessions unauthenticated (pre-phase behavior).
+func buildPeerSpec(in peerSpecInput) (peer *bgpapi.Peer) {
+	pol := &bgpapi.ApplyPolicy{
+		ImportPolicy: &bgpapi.PolicyAssignment{
+			Direction:     bgpapi.PolicyDirection_IMPORT,
+			DefaultAction: bgpapi.RouteAction_REJECT,
+		},
+		ExportPolicy: &bgpapi.PolicyAssignment{
+			Direction:     bgpapi.PolicyDirection_EXPORT,
+			DefaultAction: bgpapi.RouteAction_ACCEPT,
+		},
+	}
+
+	peer = &bgpapi.Peer{
+		ApplyPolicy: pol,
+		Conf: &bgpapi.PeerConf{
+			NeighborAddress: in.NeighborAddress,
+			PeerAsn:         in.Asn,
+			AuthPassword:    in.AuthPassword,
+		},
+		EbgpMultihop: &bgpapi.EbgpMultihop{
+			Enabled:     in.Multihop,
+			MultihopTtl: 254,
+		},
+		Timers: &bgpapi.Timers{
+			Config: &bgpapi.TimersConfig{
+				HoldTime: 240,
+			},
+		},
+		Transport: &bgpapi.Transport{
+			PassiveMode:  in.PassiveMode,
+			MtuDiscovery: true,
+			LocalAddress: in.ListenLocalAddress,
+		},
+		RouteServer: &bgpapi.RouteServer{
+			RouteServerClient: false,
+			SecondaryRoute:    false,
+		},
+
+		AfiSafis: []*bgpapi.AfiSafi{
+			{
+				Config: &bgpapi.AfiSafiConfig{
+					Family:  _v4Family,
+					Enabled: true,
+				},
+			},
+		},
+	}
+	return
+}
+
 // NewBgp creates a BGP service with explicit dependencies.
 // The provided ctx becomes the parent of the service's internal context:
 // cancelling it stops the operation loop and reaches every GoBGP API call.
@@ -81,53 +147,16 @@ func NewBgp(ctx context.Context, cfg *config.AppCfg, l loop.Loop, logger *zerolo
 	s.peers = peers
 
 	for _, peer := range cfg.Bgp.Peers {
-		pol := &bgpapi.ApplyPolicy{
-			ImportPolicy: &bgpapi.PolicyAssignment{
-				Direction:     bgpapi.PolicyDirection_IMPORT,
-				DefaultAction: bgpapi.RouteAction_REJECT,
-			},
-			ExportPolicy: &bgpapi.PolicyAssignment{
-				Direction:     bgpapi.PolicyDirection_EXPORT,
-				DefaultAction: bgpapi.RouteAction_ACCEPT,
-			},
-		}
+		spec := buildPeerSpec(peerSpecInput{
+			Asn:                  peer.Asn,
+			NeighborAddress:      peer.Address.IP.String(),
+			Multihop:             peer.Multihop,
+			PassiveMode:          peer.PassiveMode,
+			ListenLocalAddress:   cfg.Bgp.Listen.IP.String(),
+			AuthPassword:         peer.AuthPassword,
+		})
 
-		if e := s.bgp.AddPeer(cctx, &bgpapi.AddPeerRequest{
-			Peer: &bgpapi.Peer{
-				ApplyPolicy: pol,
-				Conf: &bgpapi.PeerConf{
-					NeighborAddress: peer.Address.IP.String(),
-					PeerAsn:         peer.Asn,
-				},
-				EbgpMultihop: &bgpapi.EbgpMultihop{
-					Enabled:     peer.Multihop,
-					MultihopTtl: 254,
-				},
-				Timers: &bgpapi.Timers{
-					Config: &bgpapi.TimersConfig{
-						HoldTime: 240,
-					},
-				},
-				Transport: &bgpapi.Transport{
-					PassiveMode:  peer.PassiveMode,
-					MtuDiscovery: true,
-					LocalAddress: cfg.Bgp.Listen.IP.String(),
-				},
-				RouteServer: &bgpapi.RouteServer{
-					RouteServerClient: false,
-					SecondaryRoute:    false,
-				},
-
-				AfiSafis: []*bgpapi.AfiSafi{
-					{
-						Config: &bgpapi.AfiSafiConfig{
-							Family:  _v4Family,
-							Enabled: true,
-						},
-					},
-				},
-			},
-		}); e != nil {
+		if e := s.bgp.AddPeer(cctx, &bgpapi.AddPeerRequest{Peer: spec}); e != nil {
 			return nil, fmt.Errorf("bgp: add peer %s failed: %w", peer.Address.String(), e)
 		}
 	}
