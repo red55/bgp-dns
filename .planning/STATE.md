@@ -2,28 +2,28 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 04 complete
-stopped_at: Phase 05 pending planning
-last_updated: "2026-08-19T04:31:31.049Z"
+status: Phase 05 in progress
+stopped_at: Phase 05 wave 1/1 — plan 05-01 complete
+last_updated: "2026-08-19T05:55:01Z"
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 18
-  completed_plans: 14
+  completed_plans: 15
 current_phase_name: Security
 ---
 
 # bgp-dns — Project State
 
 **Created:** 2026-06-13
-**Last Updated:** 2026-08-18
+**Last Updated:** 2026-08-19
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-06-13)
 
 **Core value:** Resolve domains from a configurable list and advertise their IPs via BGP — fast, correct route propagation with zero manual intervention.
-**Current focus:** Phase 05 — security (pending planning)
+**Current focus:** Phase 5 — security
 
 ## Phase Status
 
@@ -33,7 +33,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 | 2 | Test Suite | ● Complete | 3/3 | VERIFIED |
 | 3 | Dependency Injection | ● Complete | 6/6 | VERIFIED |
 | 4 | Reliability | ● Complete | 2/2 | VERIFIED |
-| 5 | Security | ○ Pending | 0/0 | Context not gathered |
+| 5 | Security | ● In Progress | 1/3 | 05-01 done (c0c31bc..e3197e0); 05-02/05-03 pending |
 
 ## Project Memory
 
@@ -72,6 +72,6 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 
 ## Session
 
-**Last session:** 2026-08-18 (Phase 04 execution)
-**Stopped at:** Phase 04 verified + roadmap/state finalized; Phase 05 not yet planned
-**Resume file:** none (run `/gsd-next`; expected route: `/gsd-plan-phase 5` after context gathering)
+**Last session:** 2026-08-19 (Phase 05 execution — 05-01 complete)
+**Stopped at:** Phase 05 wave 1/1 — 05-01 committed c0c31bc..e3197e0; next: plan 05-02 (DNS served-qtype guard)
+**Resume file:** none (run `/gsd-next`; expected route: `/gsd-execute-phase 5` to continue plans 05-02/05-03)
