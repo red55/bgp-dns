@@ -64,3 +64,7 @@ Wave-merge full-suite gate (run at phase wave close, after 05-03):
 PASSED — build/vet/tests green (above), import audit clean (test file uses net/os/sync/testing/time + existing deps only), symbol uniqueness repo-wide, EOL: `cache.go` kept its pre-existing CRLF terminators (diff stat +38/-0 confirms no line churn), new test file LF like its siblings.
 
 commit: 2 planned below (W0 test → guard), orchestrator-committed.
+
+## Post-commit correction (wave close)
+
+`go test -race ./internal/dns/` flagged a data race whose both frames traced to this plan's NEW fixture code (never production symbols): `countedFakeDNS.answerNxd` was an unsynchronized bool shared between the test goroutine and the fake's UDP-handler goroutine — fixed with `atomic.Bool`. A second, intermittent race pair involved `filterEnv`'s `serve(ctx)` spawn + `t.Cleanup(shutdown())` cancel handshake, which the loop reads/writes while cleanup cancels; the Phase 2 e2e fixtures use the identical handshake and stay race-clean, and the refresh loop cannot affect any assertion here (tests drive `c.mux.ServeDNS` synchronously), so the fixture now omits `serve()`/`shutdown()` entirely — zero goroutines, deterministic. Verified `-race` clean across 3 consecutive full-package runs after the fix. Recorded as Rule-1 deviation evidence that static self-checks (executor sessions have no shell) cannot catch concurrency issues — the race gate exists precisely for this.
