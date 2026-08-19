@@ -11,6 +11,10 @@ Bgp:
       Address:
         Ip: 192.168.151.44
         Port: 179
+      # Optional TCP-MD5 session key (RFC 2385/5925). Must match the peer
+      # router's BGP authentication key; omit or leave empty for no auth.
+      # Keep this file mode-restricted when set (e.g. chmod 600).
+      #AuthPassword: <tcp-md5-session-key>
 Dns:
   Listen:
     Ip: 0.0.0.0
