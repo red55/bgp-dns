@@ -57,7 +57,39 @@ func Serve(_app *app.Application, listFile string) (e error) {
 		return e
 	}
 
-	grpcServer := grpc.NewServer()
+	// SEC-01: net.Listen creates the socket honoring the process umask; force
+	// owner-only access before the server accepts any connection. Unix targets
+	// only — tcp listeners keep their existing behavior.
+	if proto == "unix" {
+		if e = os.Chmod(target, 0o600); e != nil {
+			_app.L().Fatal().Err(e).Msgf("CLI Service: Failed to set mode 0600 on %s", target)
+			return e
+		}
+	}
+
+	// SEC-02: unified validation gate. ONE shared audit handler is chained for
+	// both the unary and the stream paths: every RPC emits exactly one
+	// structured event (method + elapsed time) and is forwarded untouched. It
+	// makes no request-shape decisions — gRPC serializes a nil request into an
+	// empty message that cannot be distinguished here, so nil-rejection stays
+	// authoritative in the per-handler checks below.
+	auditRPC := func(method string, start time.Time) {
+		_app.L().Debug().Str("rpc", method).Dur("elapsed", time.Since(start)).Msg("CLI Service: gRPC call")
+	}
+	grpcServer := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+			start := time.Now()
+			resp, err := handler(ctx, req)
+			auditRPC(info.FullMethod, start)
+			return resp, err
+		}),
+		grpc.ChainStreamInterceptor(func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+			start := time.Now()
+			err := handler(srv, ss)
+			auditRPC(info.FullMethod, start)
+			return err
+		}),
+	)
 	cliServer := &CacheCliServiceImpl{}
 	api.RegisterBgpDnsServiceServer(grpcServer, cliServer)
 	_app.L().Info().Msgf("CLI Service: gRPC server started on %s", target)
@@ -67,7 +99,9 @@ func Serve(_app *app.Application, listFile string) (e error) {
 	}
 
 	go func(l net.Listener) {
-		if e = grpcServer.Serve(l); e != nil {
+		// A stopped server reports ErrServerStopped from Serve — that is the
+		// normal shutdown path (GracefulStop), not a startup failure.
+		if e = grpcServer.Serve(l); e != nil && !errors.Is(e, grpc.ErrServerStopped) {
 			_app.L().Fatal().Err(e).Msgf("CLI Service: Failed to start gRPC server on %s", target)
 		}
 
