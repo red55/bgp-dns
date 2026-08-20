@@ -19,6 +19,8 @@ Resolve domains from a configurable list and advertise their IPs via BGP — fas
 - ✓ File watcher triggers domain list reload on changes — existing codebase
 - ✓ gRPC CLI (`bgp-dnsctl`) for cache list/clear and list reload — existing codebase
 - ✓ Spike 001 validated: regexServeMux for wildcard/regex domain matching works correctly — spike-findings-bgp-dns
+- ✓ gRPC admin socket forced to 0600 + unified nil-request/stream validation gate on all RPCs — Phase 5
+- ✓ Optional per-peer BGP TCP-MD5 session key (`AuthPassword`) wired into GoBGP spec — Phase 5
 
 ### Active
 
@@ -29,7 +31,6 @@ Resolve domains from a configurable list and advertise their IPs via BGP — fas
 - [ ] Add DNS query timeout configuration
 - [ ] Optimize O(n²) set difference to O(n) using maps
 - [ ] Fix BGP context propagation (use cancellable context instead of context.Background())
-- [ ] Add gRPC authentication (Unix socket permissions / mTLS)
 - [ ] Add proper error handling for BGP operations (currently ignored)
 
 ### Out of Scope
@@ -61,9 +62,12 @@ Resolve domains from a configurable list and advertise their IPs via BGP — fas
 | Use regexServeMux for domain matching | miekg/dns doesn't support regex natively; custom mux with exact > wildcard > regex > catch-all priority validated in spike 001 | — Pending |
 | `regex:` prefix syntax for domainlist | Simpler to parse than `/pattern/` delimiters; explicit and unambiguous | — Pending |
 | Fix global state before adding features | Testing impossible with package-level singletons; refactoring first reduces regression risk | — Pending |
+| Force gRPC Unix socket to 0600 via `os.Chmod` (not `syscall.Umask`) | umask is process-wide and affects other files; explicit chmod scoped to the socket is surgical and race-free after `net.Listen` | Verified Phase 5 |
+| Unified validation gate = one shared interceptor logging rpc+elapsed only; nil-rejection stays in per-handler checks | A gRPC interceptor cannot distinguish a nil request (serialized as empty message); keeping authoritative nil checks in handlers avoids double-gating while giving every RPC one audit event | Verified Phase 5 |
+| BGP auth shipped as opt-in `AuthPassword` → GoBGP `Conf.AuthPassword` (TCP-MD5) | RFC 2385/5925 enforced by GoBGP at the peer connection; default-off preserves existing deployments; credential never logged (rendered set/unset only) | Verified Phase 5 |
 
 ---
-*Last updated: 2026-06-13 after initialization*
+*Last updated: 2026-08-20 after Phase 5 (Security)*
 
 ## Evolution
 

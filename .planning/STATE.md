@@ -3,27 +3,27 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Phase 05 complete
-stopped_at: Phase 05 wave 1/1 — all 3 plans executed; awaiting verification
-last_updated: "2026-08-19T16:47:45Z"
+stopped_at: Phase 05 wave 1/1 closed; full-suite + race gates green; next step `/gsd-verify-phase 5`
+last_updated: "2026-08-20T04:48:59.751Z"
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 18
-  completed_plans: 18
+  completed_plans: 17
 current_phase_name: Security
 ---
 
 # bgp-dns — Project State
 
 **Created:** 2026-06-13
-**Last Updated:** 2026-08-19
+**Last Updated:** 2026-08-20
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-06-13)
+See: `.planning/PROJECT.md` (updated 2026-08-20)
 
 **Core value:** Resolve domains from a configurable list and advertise their IPs via BGP — fast, correct route propagation with zero manual intervention.
-**Current focus:** Phase 5 — security
+**Current focus:** Milestone v1.0 complete — ready to archive
 
 ## Phase Status
 
@@ -33,7 +33,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 | 2 | Test Suite | ● Complete | 3/3 | VERIFIED |
 | 3 | Dependency Injection | ● Complete | 6/6 | VERIFIED |
 | 4 | Reliability | ● Complete | 2/2 | VERIFIED |
-| 5 | Security | ● Complete (executed) | 3/3 | c0c31bc..b1f8550; awaiting verification |
+| 5 | Security | ● Complete | 3/3 | VERIFIED |
 
 ## Project Memory
 
@@ -54,7 +54,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 
 - Spike 001 validated that custom regexServeMux works with miekg/dns — no need to fork or patch
 - O(n²) set difference in `internal/utils/main.go` is a known performance concern
-- gRPC has no authentication — Unix socket permissions are the only mitigation
+- ~~gRPC has no authentication~~ — mitigated Phase 5: Unix socket forced 0600, unified nil-request/stream validation gate on all RPCs, optional per-peer BGP TCP-MD5 session key
 
 ## Artifacts
 
@@ -72,6 +72,6 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 
 ## Session
 
-**Last session:** 2026-08-19 (Phase 05 execution — all 3 plans complete)
-**Stopped at:** Phase 05 wave 1/1 closed; full-suite + race gates green; next step `/gsd-verify-phase 5`
-**Resume file:** none (run `/gsd-next`; expected route: `/gsd-verify-phase 5`)
+**Last session:** 2026-08-20 (Phase 05 Security verified + UAT passed; milestone v1.0 all 5 phases complete)
+**Stopped at:** Phase 05 marked complete — verification report `passed` (13/13), UAT 7/7; ready to `/gsd-complete-milestone v1.0`
+**Resume file:** none (run `/gsd-next`; expected route: `/gsd-complete-milestone v1.0`)

@@ -37,10 +37,10 @@
 
 ### Security
 
-- [ ] **SEC-01**: gRPC Unix socket file permissions set to 0600 (owner-only)
-- [ ] **SEC-02**: gRPC server validates incoming requests (nil checks preserved/enhanced)
-- [ ] **SEC-03**: DNS query type filtering (only A, AAAA, HTTPS, NXDOMAIN allowed for listed domains)
-- [ ] **SEC-04**: BGP peer configuration supports optional AuthPassword field
+- [x] **SEC-01**: gRPC Unix socket file permissions set to 0600 (owner-only)
+- [x] **SEC-02**: gRPC server validates incoming requests (nil checks preserved/enhanced)
+- [x] **SEC-03**: DNS query type filtering (only A, AAAA, HTTPS, NXDOMAIN allowed for listed domains)
+- [x] **SEC-04**: BGP peer configuration supports optional AuthPassword field
 
 ## v2 Requirements
 
@@ -95,10 +95,10 @@
 | RELIAB-02 | Phase 4 | Complete |
 | RELIAB-03 | Phase 4 | Complete |
 | RELIAB-04 | Phase 4 | Complete |
-| SEC-01 | Phase 5 | Pending |
-| SEC-02 | Phase 5 | Pending |
-| SEC-03 | Phase 5 | Pending |
-| SEC-04 | Phase 5 | Pending |
+| SEC-01 | Phase 5 | Complete |
+| SEC-02 | Phase 5 | Complete |
+| SEC-03 | Phase 5 | Complete |
+| SEC-04 | Phase 5 | Complete |
 
 **Coverage:**
 
