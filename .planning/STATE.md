@@ -2,13 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 05 complete
-stopped_at: Phase 05 wave 1/1 closed; full-suite + race gates green; next step `/gsd-verify-phase 5`
-last_updated: "2026-08-20T04:48:59.751Z"
+status: Awaiting next milestone
+stopped_at: Phase 05 marked complete — verification report `passed` (13/13), UAT 7/7; ready to `/gsd-complete-milestone v1.0`
+last_updated: "2026-08-20T05:26:31.772Z"
+last_activity: 2026-08-20
+last_activity_desc: Milestone v1.0 completed and archived
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 18
+  completed_phases: 5
+  total_plans: 17
   completed_plans: 17
 current_phase_name: Security
 ---
@@ -23,7 +25,7 @@ current_phase_name: Security
 See: `.planning/PROJECT.md` (updated 2026-08-20)
 
 **Core value:** Resolve domains from a configurable list and advertise their IPs via BGP — fast, correct route propagation with zero manual intervention.
-**Current focus:** Milestone v1.0 complete — ready to archive
+**Current focus:** Planning next milestone — v1.0 (MVP) shipped 2026-08-20
 
 ## Phase Status
 
@@ -75,3 +77,14 @@ See: `.planning/PROJECT.md` (updated 2026-08-20)
 **Last session:** 2026-08-20 (Phase 05 Security verified + UAT passed; milestone v1.0 all 5 phases complete)
 **Stopped at:** Phase 05 marked complete — verification report `passed` (13/13), UAT 7/7; ready to `/gsd-complete-milestone v1.0`
 **Resume file:** none (run `/gsd-next`; expected route: `/gsd-complete-milestone v1.0`)
+
+## Current Position
+
+Phase: Milestone v1.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-08-20 — Milestone v1.0 completed and archived
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
