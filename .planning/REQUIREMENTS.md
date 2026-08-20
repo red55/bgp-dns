@@ -30,10 +30,10 @@
 
 ### Reliability
 
-- [ ] **RELIAB-01**: DNS queries have configurable timeout (default 5s)
-- [ ] **RELIAB-02**: Set difference optimized from O(n²) to O(n) using map-based sets
-- [ ] **RELIAB-03**: BGP operations use cancellable context instead of context.Background()
-- [ ] **RELIAB-04**: BGP Advance/Withdraw errors logged at Warn level instead of silently ignored
+- [x] **RELIAB-01**: DNS queries have configurable timeout (default 5s)
+- [x] **RELIAB-02**: Set difference optimized from O(n²) to O(n) using map-based sets
+- [x] **RELIAB-03**: BGP operations use cancellable context instead of context.Background()
+- [x] **RELIAB-04**: BGP Advance/Withdraw errors logged at Warn level instead of silently ignored
 
 ### Security
 
@@ -91,10 +91,10 @@
 | REFACTOR-02 | Phase 3 | Complete |
 | REFACTOR-03 | Phase 3 | Complete |
 | REFACTOR-04 | Phase 3 | Complete |
-| RELIAB-01 | Phase 4 | Pending |
-| RELIAB-02 | Phase 4 | Pending |
-| RELIAB-03 | Phase 4 | Pending |
-| RELIAB-04 | Phase 4 | Pending |
+| RELIAB-01 | Phase 4 | Complete |
+| RELIAB-02 | Phase 4 | Complete |
+| RELIAB-03 | Phase 4 | Complete |
+| RELIAB-04 | Phase 4 | Complete |
 | SEC-01 | Phase 5 | Pending |
 | SEC-02 | Phase 5 | Pending |
 | SEC-03 | Phase 5 | Pending |
